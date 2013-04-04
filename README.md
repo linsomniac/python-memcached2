@@ -37,5 +37,10 @@ a buffered input wrapper and using recv() to read large blocks of data,
 then search for the newline or other data.  Should be a big performance
 boost, especially on large data stores.
 
+I'd also like to have a comprehensive test suite for it.  The old package
+had a basic test suite, but it was missing a *LOT* of test cases.  I'd
+like ot have a test case that demonstrates the failure before looking at a
+patch to fix it.
+
 Thoughts?  If you know anyone who is interested in Python and Memcached,
 please direct them to this project, I'd like the input early.
