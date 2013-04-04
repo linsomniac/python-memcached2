@@ -1,6 +1,7 @@
-check: clean
+check:
 	pep8 --ignore=W191 --show-source tests/*.py memcached2.py
 	bash -c 'cd tests && exec make'
+	@make clean
 
 commit: check
 	git diff >/tmp/git-diff.out 2>&1
