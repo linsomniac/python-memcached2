@@ -9,6 +9,6 @@ test:
 		)
 test3:
 	@- $(foreach TEST,$(TESTS), \
-		echo === Running python2 test: $(TEST); \
+		echo === Running python3 test: $(TEST); \
 		python3 $(TEST); \
 		)
