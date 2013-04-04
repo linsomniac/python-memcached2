@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+
 class ServerConnection:
-	def __init__(self, uri, timeout = None):
-		self.uri = url
+	def __init__(self, uri, timeout=None):
+		self.uri = uri
 		self.timeout = timeout
 		self.reset()
 
