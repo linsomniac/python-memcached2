@@ -1,5 +1,5 @@
 check:
-	pep8 --ignore=W191 --show-source tests/*.py memcached2.py
+	pep8 --show-source tests/*.py memcached2.py
 	bash -c 'cd tests && exec make'
 	@make clean
 
@@ -9,4 +9,4 @@ commit: check
 	git push
 
 clean:
-	rm -rf __pycache__ *.pyc
+	rm -rf __pycache__ tests/__pycache__ *.pyc tests/*.pyc
