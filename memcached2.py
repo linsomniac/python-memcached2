@@ -1,39 +1,53 @@
 #!/usr/bin/env python3
 
+import re
+
 
 class Memcached2Exception(Exception):
-	pass
+	'''Base exception that all other exceptions inherit from'''
 
 
 class UnknownProtocol(Memcached2Exception):
-	pass
+	'''An unknown protocol was specified in the memcached URI'''
 
 
 class InvalidURI(Memcached2Exception):
-	pass
+	'''An error was encountered in parsing the URI'''
 
 
 class ServerConnection:
+	'''Low-level communication with the memcached server.  This implments
+	the connection to the server, sending messages and parsing responses.'''
+
 	def __init__(self, uri, timeout=None):
 		self.uri = uri
 		self.parsed_uri = self.parse_uri()
 		self.timeout = timeout
 		self.backend = None
+		self.buffer_readsize = 10000
 		self.reset()
 
 	def reset(self):
+		'''Reset the connection including flushing buffered data and closing
+		the backend connection.'''
+
 		self.buffer = b''
 		if self.backend:
 			self.backend.close()
 		self.backend = None
 
 	def consume_from_buffer(self, length):
+		'''Retrieve the specified number of bytes from the buffer'''
+
 		data = self.buffer[:length]
 		self.buffer = self.buffer[length:]
 		return data
 
 	def parse_uri(self):
-		import re
+		'''Parse a server connection URI.  Returns a dictionary with the
+		connection information, including a 'protocol' key and other
+		protocol-specific keys.'''
+
 		m = re.match(r'memcached://(?P<host>[^:]+)(:(?P<port>[0-9]+))?/',
 				self.uri)
 		if m:
@@ -48,6 +62,9 @@ class ServerConnection:
 		raise InvalidURI('Invalid URI: {0}'.format(self.uri))
 
 	def connect(self):
+		'''Connect to memcached server.  If already connected,
+		this function returns immmediately.'''
+
 		if self.backend:
 			return
 
@@ -63,9 +80,16 @@ class ServerConnection:
 				.format(self.parsed_uri['protocol']))
 
 	def send_command(self, command):
-		self.backend.send(command + b'\n')
+		'''Write an ASCII command to the memcached server.  If "command" does
+		not end with a trailing newline, one is added.'''
+
+		if not command.endswith(b'\n'):
+			command += b'\n'
+		self.backend.send(command)
 
 	def read_until(self, search):
+		'''Read data from the server until "search" is found.  Return data read
+		including the first occurrence of "search".'''
 		start = 0
 		search_len = len(search)
 
@@ -77,4 +101,4 @@ class ServerConnection:
 				else:
 					start = max(0, len(self.buffer) - search_len)
 
-			self.buffer += self.backend.recv(10000)
+			self.buffer += self.backend.recv(self.buffer_readsize)
