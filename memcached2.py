@@ -15,6 +15,10 @@ class InvalidURI(Memcached2Exception):
 	'''An error was encountered in parsing the URI'''
 
 
+class BackendDisconnect(Memcached2Exception):
+	'''The backend connection closed'''
+
+
 class ServerConnection:
 	'''Low-level communication with the memcached server.  This implments
 	the connection to the server, sending messages and parsing responses.'''
@@ -101,4 +105,7 @@ class ServerConnection:
 				else:
 					start = max(0, len(self.buffer) - search_len)
 
-			self.buffer += self.backend.recv(self.buffer_readsize)
+			data = self.backend.recv(self.buffer_readsize)
+			if not data:
+				raise BackendDisconnect('During read_until()')
+			self.buffer += data
