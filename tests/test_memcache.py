@@ -22,7 +22,10 @@ class test_ServerConnection(unittest.TestCase):
     def test_SetAndGet(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.set('foo', 'bar')
-        self.assertEqual(memcache.get('foo'), b'bar')
+        result = memcache.get('foo')
+        self.assertEqual(result, b'bar')
+        self.assertEqual(result.key, b'foo')
+        self.assertEqual(result.flags, 0)
         memcache.close()
 
 unittest.main()

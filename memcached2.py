@@ -43,6 +43,25 @@ class NotFound(StoreException):
     '''Item you are trying to store with a "cas" command does not exist'''
 
 
+class Foo:
+    def __init__(self, *args):
+        print('******************* ARGS: {0}'.format(repr(args)))
+        super().__init__()
+
+
+class MemcacheValue(bytes):
+    '''Wrapper around Memcache value results, to augment the return data to
+    include the additional information (flags, key, cas_unique)'''
+
+    def __new__(self, value, key, flags, cas_unique=None):
+        data = super(MemcacheValue, self).__new__(self, value)
+        self.key = key
+        self.flags = flags
+        self.cas_unique = cas_unique
+
+        return data
+
+
 class Memcache:
     def __init__(self, servers):
         self.servers = [ServerConnection(x) for x in servers]
@@ -60,13 +79,14 @@ class Memcache:
             raise ValueError('Unknown response: {0}'.format(repr(data)))
         key, flags, length = data[1:]
         length = int(length)
+        flags = int(flags)
         body = self.servers[0].read_length(length)
         data = self.servers[0].read_until(b'\r\n')   # trailing termination
         data = self.servers[0].read_until(b'\r\n')
         if data != b'END\r\n':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
 
-        return body
+        return MemcacheValue(body, key, flags)
 
     def set(self, key, value, flags=0, exptime=0):
         if not self.servers[0].backend:
