@@ -76,7 +76,7 @@ class test_ServerConnection(unittest.TestCase):
     def test_BasicCommand(self):
         sc = memcached2.ServerConnection('memcached://localhost/')
         sc.connect()
-        sc.send_command(b'flush_all')
+        sc.send_command(b'flush_all\r\n')
         self.assertEqual(sc.read_until(b'\r\n'), b'OK\r\n')
         sc.reset()
 
@@ -91,7 +91,7 @@ class test_ServerConnection(unittest.TestCase):
         sc = memcached2.ServerConnection('memcached://127.0.0.1:{0}/'
                 .format(server.port))
         sc.connect()
-        sc.send_command(b'flush_all')
+        sc.send_command(b'flush_all\r\n')
         with self.assertRaises(memcached2.BackendDisconnect):
             self.assertEqual(sc.read_until(b'\r\n'), b'OK\r\n')
         sc.reset()
@@ -104,7 +104,7 @@ class test_ServerConnection(unittest.TestCase):
         sc = memcached2.ServerConnection('memcached://127.0.0.1:{0}/'
                 .format(server.port))
         sc.connect()
-        sc.send_command(b'flush_all')
+        sc.send_command(b'flush_all\r\n')
         with self.assertRaises(memcached2.BackendDisconnect):
             self.assertEqual(sc.read_until(b'\r\n'), b'OK\r\n')
         sc.reset()

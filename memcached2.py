@@ -25,6 +25,57 @@ class BackendDisconnect(Memcached2Exception):
     '''The backend connection closed'''
 
 
+class Memcached2StoreException(Memcached2Exception):
+    '''Base class for storage related exceptions.'''
+
+
+class Memcached2NotStored(Memcached2StoreException):
+    '''Item was not stored, but not due to an error.  Normally means the
+    condition for an "add" or "replace" was not met'''
+
+
+class Memcached2Exists(Memcached2StoreException):
+    '''Item you are trying to store with a "cas" command has been modified
+    since you last fetched it'''
+
+
+class Memcached2NotFound(Memcached2StoreException):
+    '''Item you are trying to store with a "cas" command does not exist'''
+
+
+class Memcache:
+    def __init__(self, servers):
+        self.servers = [ServerConnection(x) for x in servers]
+
+    def set(self, key, value, flags=0, exptime=0):
+        if not self.servers[0].backend:
+            self.servers[0].connect()
+
+        if PY3:
+            command = bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
+                    exptime, len(value)), 'ascii') + bytes(value,
+                    'ascii') + b'\r\n'
+        else:
+            command = bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
+                    exptime, len(value))) + bytes(value) + b'\r\n'
+        self.servers[0].send_command(command)
+
+        data = self.servers[0].read_until(b'\r\n')
+
+        if data == 'STORED\r\n':
+            return
+        if data == 'NOT STORED\r\n':
+            return
+        if data == 'EXISTS\r\n':
+            return
+        if data == 'NOT FOUND\r\n':
+            return
+
+    def close(self):
+        for server in self.servers:
+            server.reset()
+
+
 class ServerConnection:
     '''Low-level communication with the memcached server.  This implments
     the connection to the server, sending messages and parsing responses.'''
@@ -89,11 +140,8 @@ class ServerConnection:
                 .format(self.parsed_uri['protocol']))
 
     def send_command(self, command):
-        '''Write an ASCII command to the memcached server.  If "command" does
-        not end with a trailing newline, one is added.'''
+        '''Write an ASCII command to the memcached server.'''
 
-        if not command.endswith(b'\n'):
-            command += b'\n'
         self.backend.send(command)
 
     def read_until(self, search):
