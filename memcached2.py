@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
 import re
+import socket
+
+try:
+    ConnectionResetError
+except NameError:
+    ConnectionResetError = socket.error
 
 
 class Memcached2Exception(Exception):
@@ -74,7 +80,6 @@ class ServerConnection:
 
         self.reset()
         if self.parsed_uri['protocol'] == 'memcached':
-            import socket
             self.backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.backend.connect((self.parsed_uri['host'],
                     self.parsed_uri['port']))
@@ -105,7 +110,10 @@ class ServerConnection:
                 else:
                     start = max(0, len(self.buffer) - search_len)
 
-            data = self.backend.recv(self.buffer_readsize)
+            try:
+                data = self.backend.recv(self.buffer_readsize)
+            except ConnectionResetError:
+                raise BackendDisconnect('During recv() in read_until()')
             if not data:
-                raise BackendDisconnect('During read_until()')
+                raise BackendDisconnect('Zero-length read in read_until()')
             self.buffer += data

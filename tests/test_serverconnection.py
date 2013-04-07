@@ -81,13 +81,26 @@ class test_ServerConnection(unittest.TestCase):
         sc.reset()
 
     def test_ServerFlushDisconnect(self):
-        class Server(FakeMemcacheServer):
+        class DisconnetAfterCommandServer(FakeMemcacheServer):
             def server(self, sock, conn, count):
-                data = conn.recv(100)
+                conn.recv(100)
                 conn.close()
                 #conn.send(b'OK\n')
 
-        server = Server()
+        server = DisconnetAfterCommandServer()
+        sc = memcached2.ServerConnection('memcached://127.0.0.1:{0}/'
+                .format(server.port))
+        sc.connect()
+        sc.send_command(b'flush_all')
+        with self.assertRaises(memcached2.BackendDisconnect):
+            self.assertEqual(sc.read_until(b'\r\n'), b'OK\r\n')
+        sc.reset()
+
+        class ImmediatelyDisconnectServer(FakeMemcacheServer):
+            def server(self, sock, conn, count):
+                conn.close()
+
+        server = ImmediatelyDisconnectServer()
         sc = memcached2.ServerConnection('memcached://127.0.0.1:{0}/'
                 .format(server.port))
         sc.connect()
