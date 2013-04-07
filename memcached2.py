@@ -43,12 +43,6 @@ class NotFound(StoreException):
     '''Item you are trying to store with a "cas" command does not exist'''
 
 
-class Foo:
-    def __init__(self, *args):
-        print('******************* ARGS: {0}'.format(repr(args)))
-        super().__init__()
-
-
 class MemcacheValue(bytes):
     '''Wrapper around Memcache value results, to augment the return data to
     include the additional information (flags, key, cas_unique)'''
