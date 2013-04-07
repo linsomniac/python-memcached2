@@ -47,6 +47,27 @@ class Memcache:
     def __init__(self, servers):
         self.servers = [ServerConnection(x) for x in servers]
 
+    def get(self, key):
+        if PY3:
+            command = bytes('get {0}\r\n'.format(key), 'ascii')
+        else:
+            command = bytes('get {0}\r\n'.format(key))
+
+        self.servers[0].send_command(command)
+
+        data = self.servers[0].read_until(b'\r\n').rstrip().split()
+        if data[0] != b'VALUE':
+            raise ValueError('Unknown response: {0}'.format(repr(data)))
+        key, flags, length = data[1:]
+        length = int(length)
+        body = self.servers[0].read_length(length)
+        data = self.servers[0].read_until(b'\r\n')   # trailing termination
+        data = self.servers[0].read_until(b'\r\n')
+        if data != b'END\r\n':
+            raise ValueError('Unknown response: {0}'.format(repr(data)))
+
+        return body
+
     def set(self, key, value, flags=0, exptime=0):
         if not self.servers[0].backend:
             self.servers[0].connect()
@@ -168,3 +189,16 @@ class ServerConnection:
             if not data:
                 raise BackendDisconnect('Zero-length read in read_until()')
             self.buffer += data
+
+    def read_length(self, length):
+        '''Read the specified number of bytes.  Return data read.'''
+        while len(self.buffer) < length:
+            try:
+                data = self.backend.recv(self.buffer_readsize)
+            except ConnectionResetError:
+                raise BackendDisconnect('During recv() in read_length()')
+            if not data:
+                raise BackendDisconnect('Zero-length read in read_length()')
+            self.buffer += data
+
+        return self.consume_from_buffer(length)
