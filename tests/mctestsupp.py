@@ -36,6 +36,6 @@ class FakeMemcacheServer:
             signal.signal(signal.SIGALRM, alarm)
             signal.alarm(5)
             while True:
-                conn, addr = self.s.accept()
-                self.server(self.s, conn, count)
+                connection, addr = self.s.accept()
+                self.server(self.s, connection, count)
                 count += 1
