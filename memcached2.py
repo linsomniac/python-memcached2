@@ -62,14 +62,17 @@ class Memcache:
 
         data = self.servers[0].read_until(b'\r\n')
 
-        if data == 'STORED\r\n':
+        if data == b'STORED\r\n':
             return
-        if data == 'NOT STORED\r\n':
-            return
-        if data == 'EXISTS\r\n':
-            return
-        if data == 'NOT FOUND\r\n':
-            return
+        if data == b'NOT STORED\r\n':
+            raise Memcached2NotStored('During set()')
+        if data == b'EXISTS\r\n':
+            raise Memcached2Exists('During set()')
+        if data == b'NOT FOUND\r\n':
+            raise Memcached2NotFound('During set()')
+
+        raise NotImplementedError('Unknown return data from server: "{0}"'
+                .format(data))
 
     def close(self):
         for server in self.servers:
