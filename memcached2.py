@@ -2,10 +2,10 @@
 
 import re
 import socket
+import sys
 
-try:
-    ConnectionResetError
-except NameError:
+PY3 = sys.version > '3'
+if not PY3:
     ConnectionResetError = socket.error
 
 
