@@ -25,21 +25,21 @@ class BackendDisconnect(Memcached2Exception):
     '''The backend connection closed'''
 
 
-class Memcached2StoreException(Memcached2Exception):
+class StoreException(Memcached2Exception):
     '''Base class for storage related exceptions.'''
 
 
-class Memcached2NotStored(Memcached2StoreException):
+class NotStored(StoreException):
     '''Item was not stored, but not due to an error.  Normally means the
     condition for an "add" or "replace" was not met'''
 
 
-class Memcached2Exists(Memcached2StoreException):
+class Exists(StoreException):
     '''Item you are trying to store with a "cas" command has been modified
     since you last fetched it'''
 
 
-class Memcached2NotFound(Memcached2StoreException):
+class NotFound(StoreException):
     '''Item you are trying to store with a "cas" command does not exist'''
 
 
@@ -65,11 +65,11 @@ class Memcache:
         if data == b'STORED\r\n':
             return
         if data == b'NOT STORED\r\n':
-            raise Memcached2NotStored('During set()')
+            raise NotStored('During set()')
         if data == b'EXISTS\r\n':
-            raise Memcached2Exists('During set()')
+            raise Exists('During set()')
         if data == b'NOT FOUND\r\n':
-            raise Memcached2NotFound('During set()')
+            raise NotFound('During set()')
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(data))
