@@ -39,3 +39,20 @@ class FakeMemcacheServer:
                 connection, addr = self.s.accept()
                 self.server(self.s, connection, count)
                 count += 1
+
+
+RECEIVE = None
+
+
+class CommandServer(FakeMemcacheServer):
+    def __init__(self, commands):
+        super(CommandServer, self).__init__()
+        self.commands = commands
+
+    def server(self, sock, conn, count):
+        for command in self.commands:
+            if command == RECEIVE:
+                conn.recv(1000)
+            else:
+                conn.send(command)
+        conn.close()
