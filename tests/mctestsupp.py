@@ -46,8 +46,8 @@ RECEIVE = None
 
 class CommandServer(FakeMemcacheServer):
     def __init__(self, commands):
-        super(CommandServer, self).__init__()
         self.commands = commands
+        FakeMemcacheServer.__init__(self)
 
     def server(self, sock, conn, count):
         for command in self.commands:
