@@ -60,6 +60,9 @@ class Memcache:
     def __init__(self, servers):
         self.servers = [ServerConnection(x) for x in servers]
 
+    def __del__(self):
+        self.close()
+
     def get(self, key):
         if PY3:
             command = bytes('get {0}\r\n'.format(key), 'ascii')

@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+import sys
+
+PY3 = sys.version > '3'
+
 
 def flush_local_memcache(test):
     import socket
@@ -54,5 +58,8 @@ class CommandServer(FakeMemcacheServer):
             if command == RECEIVE:
                 conn.recv(1000)
             else:
-                conn.send(command)
+                if PY3:
+                    conn.send(bytes(command, 'ascii'))
+                else:
+                    conn.send(bytes(command))
         conn.close()
