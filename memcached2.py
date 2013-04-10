@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 
+'''
+A re-implementation of the python-memcached module, designed to work with
+Python 2 and 3.  Note: It is tested against Python 2.7 and 3.3 during
+development, there may be problems running against previous versions.
+
+See the Memcache() class for an example of use.
+
+Developed by Sean Reifschneider <jafo@tummy.com> in 2013.
+
+Bugs/patches/code: https://github.com/linsomniac/python-memcached2
+'''
+
 import re
 import socket
 import sys
@@ -57,13 +69,41 @@ class MemcacheValue(bytes):
 
 
 class Memcache:
+    '''Basic memcache interface.  This interface will raise exceptions when
+    backend connections occur, allowing a program full control over handling
+    of connection problems.
+
+    An "error swallowing" wrapper will provide functionality similar to the
+    previous python-memcached module.
+
+    Example:
+
+    >>> from memcached2 import *
+    >>> mc = Memcache(['memcached://localhost:11211/'])
+    >>> mc.set('foo', 'bar')
+    >>> mc.get('foo')
+    'bar'
+
+    '''
+
     def __init__(self, servers):
+        '''Create a new Memcache connection, to the specified servers.
+        The list of servers, specified by URL, are consulted based on the
+        hash of the key, effectively "sharding" the key space.
+        '''
+
         self.servers = [ServerConnection(x) for x in servers]
 
     def __del__(self):
         self.close()
 
     def get(self, key):
+        '''Retrieve the specified key from a memcache server.  Returns
+        the value read from the server, as a "MemcacheValue" object
+        which includes attributes specifying the key and flags, otherwise
+        it acts like a string.
+        '''
+
         if PY3:
             command = bytes('get {0}\r\n'.format(key), 'ascii')
         else:
@@ -86,6 +126,12 @@ class Memcache:
         return MemcacheValue(body, key, flags)
 
     def set(self, key, value, flags=0, exptime=0):
+        '''Set a key to the value in the memcache server.  If the "flags"
+        are specified, those same flags will be provided on return.  If
+        "exptime" is set to non-zero, it specifies the expriation time, in
+        seconds, that this key's data expires.
+        '''
+
         if not self.servers[0].backend:
             self.servers[0].connect()
 
@@ -113,6 +159,9 @@ class Memcache:
                 .format(data))
 
     def close(self):
+        '''Close the connection to the backend servers.
+        '''
+
         for server in self.servers:
             server.reset()
 
