@@ -1,5 +1,4 @@
 Add hashing code.
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
-Document Memcache module.
 Abstract out command sending code.
 Decide on automatic pickling.
