@@ -22,6 +22,13 @@ if not PY3:
     ConnectionResetError = socket.error
 
 
+def _to_bytes(data):
+    '''Internal: Convert something to bytes type.'''
+    if PY3:
+        return bytes(data, 'ascii')
+    return data
+
+
 class Memcached2Exception(Exception):
     '''Base exception that all other exceptions inherit from'''
 
@@ -84,8 +91,7 @@ class HasherCMemcache:
         pass
 
     def hash(self, key):
-        if PY3:
-            key = bytes(key, 'ascii')
+        key = _to_bytes(key)
         return ((((crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
 
 
@@ -159,10 +165,7 @@ class Memcache:
         it acts like a string.
         '''
 
-        if PY3:
-            command = bytes('get {0}\r\n'.format(key), 'ascii')
-        else:
-            command = bytes('get {0}\r\n'.format(key))
+        command = _to_bytes('get {0}\r\n'.format(key))
 
         server = self.selector.select(self.servers, self.hasher)
 
@@ -192,13 +195,8 @@ class Memcache:
         if not server.backend:
             server.connect()
 
-        if PY3:
-            command = bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
-                    exptime, len(value)), 'ascii') + bytes(value,
-                    'ascii') + b'\r\n'
-        else:
-            command = bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
-                    exptime, len(value))) + bytes(value) + b'\r\n'
+        command = _to_bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
+                exptime, len(value))) + _to_bytes(value) + b'\r\n'
         server.send_command(command)
 
         data = server.read_until(b'\r\n')
