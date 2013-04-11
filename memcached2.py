@@ -15,6 +15,7 @@ Bugs/patches/code: https://github.com/linsomniac/python-memcached2
 import re
 import socket
 import sys
+from binascii import crc32
 
 PY3 = sys.version > '3'
 if not PY3:
@@ -68,6 +69,26 @@ class MemcacheValue(bytes):
         return data
 
 
+class HasherNone:
+    '''Hasher that always returns None, useful only for SelectorFirst.'''
+    def __init__(self):
+        pass
+
+    def hash(self, key):
+        return None
+
+
+class HasherCMemcache:
+    '''Hasher compatible with the C memcache hash function'''
+    def __init__(self):
+        pass
+
+    def hash(self, key):
+        if PY3:
+            key = bytes(key, 'ascii')
+        return ((((crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
+
+
 class SelectorFirst:
     '''Server selector that only returns the first server.  Useful when there
     is only one server to select amongst.'''
@@ -96,23 +117,37 @@ class Memcache:
 
     '''
 
-    def __init__(self, servers, selector=None):
+    def __init__(self, servers, selector=None, hasher=None):
         '''Create a new Memcache connection, to the specified servers.
         The list of servers, specified by URL, are consulted based on the
         hash of the key, effectively "sharding" the key space.
+
+        The "selector" is the algorithm that selects the backend server,
+        making decisions based on which servers are available and attempting
+        reconnecting.  If not specified, it defaults to SelectorFirst() if
+        there is only one server, or NotImplemented otherwise.
+
+        The "hasher" is a hash function which takes a key and returns a hash
+        for persistent server selection.  If not specified, it defaults to
+        HasherNone() if there is only one server specified, or
+        HasherCMemcache() otherwise.
         '''
 
         self.servers = [ServerConnection(x) for x in servers]
 
-        self.hasher = None
+        self.hasher = hasher
 
         if selector != None:
             self.selector = selector
         else:
             if len(self.servers) < 2:
                 self.selector = SelectorFirst()
+                if hasher == None:
+                    self.hasher = HasherNone()
             else:
                 raise NotImplementedError('Only one server supported')
+                if hasher == None:
+                    self.hasher = HasherCMemcache()
 
     def __del__(self):
         self.close()
