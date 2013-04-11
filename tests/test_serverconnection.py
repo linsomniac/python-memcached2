@@ -81,7 +81,11 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_Selectors(self):
         selector = memcached2.SelectorFirst()
-        self.assertEqual(selector.select(range(5), None), 0)
+        sc = memcached2.ServerConnection('memcached://127.0.0.1/')
+        sc2 = memcached2.ServerConnection('memcached://127.0.0.1:11234/')
+        self.assertEqual(selector.select([sc, sc2], None), sc)
+        sc.reset()
+        sc2.reset()
 
     def test_Hashers(self):
         self.assertEqual(memcached2.HasherNone().hash('x'), None)

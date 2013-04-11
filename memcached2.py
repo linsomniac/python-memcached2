@@ -102,7 +102,10 @@ class SelectorFirst:
         pass
 
     def select(self, server_list, hasher):
-        return server_list[0]
+        server = server_list[0]
+        if not server.backend:
+            server.connect()
+        return server
 
 
 class Memcache:
@@ -158,6 +161,12 @@ class Memcache:
     def __del__(self):
         self.close()
 
+    def _send_command(self, command):
+        command = _to_bytes(command)
+        server = self.selector.select(self.servers, self.hasher)
+        server.send_command(command)
+        return server
+
     def get(self, key):
         '''Retrieve the specified key from a memcache server.  Returns
         the value read from the server, as a "MemcacheValue" object
@@ -165,11 +174,8 @@ class Memcache:
         it acts like a string.
         '''
 
-        command = _to_bytes('get {0}\r\n'.format(key))
+        server = self._send_command('get {0}\r\n'.format(key))
 
-        server = self.selector.select(self.servers, self.hasher)
-
-        server.send_command(command)
         data = server.read_until(b'\r\n').rstrip().split()
         if data[0] != b'VALUE':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
@@ -177,7 +183,12 @@ class Memcache:
         length = int(length)
         flags = int(flags)
         body = server.read_length(length)
+
         data = server.read_until(b'\r\n')   # trailing termination
+        if data != b'\r\n':
+            raise ValueError('Unexpected response when looking for '
+                    'terminator: {0}'.format(data))
+
         data = server.read_until(b'\r\n')
         if data != b'END\r\n':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
@@ -190,14 +201,8 @@ class Memcache:
         "exptime" is set to non-zero, it specifies the expriation time, in
         seconds, that this key's data expires.
         '''
-
-        server = self.selector.select(self.servers, self.hasher)
-        if not server.backend:
-            server.connect()
-
-        command = _to_bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
-                exptime, len(value))) + _to_bytes(value) + b'\r\n'
-        server.send_command(command)
+        server = self._send_command('set {0} {1} {2} {3}\r\n'.format(key,
+                flags, exptime, len(value)) + value + '\r\n')
 
         data = server.read_until(b'\r\n')
 
