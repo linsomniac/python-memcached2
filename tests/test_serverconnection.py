@@ -79,4 +79,8 @@ class test_ServerConnection(unittest.TestCase):
             self.assertEqual(sc.read_until(b'\r\n'), b'OK\r\n')
         sc.reset()
 
+    def test_Selectors(self):
+        selector = memcached2.SelectorFirst()
+        self.assertEqual(selector.select(range(5), None), 0)
+
 unittest.main()

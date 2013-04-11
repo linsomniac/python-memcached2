@@ -68,6 +68,16 @@ class MemcacheValue(bytes):
         return data
 
 
+class SelectorFirst:
+    '''Server selector that only returns the first server.  Useful when there
+    is only one server to select amongst.'''
+    def __init__(self):
+        pass
+
+    def select(self, server_list, hasher):
+        return server_list[0]
+
+
 class Memcache:
     '''Basic memcache interface.  This interface will raise exceptions when
     backend connections occur, allowing a program full control over handling
@@ -86,13 +96,23 @@ class Memcache:
 
     '''
 
-    def __init__(self, servers):
+    def __init__(self, servers, selector=None):
         '''Create a new Memcache connection, to the specified servers.
         The list of servers, specified by URL, are consulted based on the
         hash of the key, effectively "sharding" the key space.
         '''
 
         self.servers = [ServerConnection(x) for x in servers]
+
+        self.hasher = None
+
+        if selector != None:
+            self.selector = selector
+        else:
+            if len(self.servers) < 2:
+                self.selector = SelectorFirst()
+            else:
+                raise NotImplementedError('Only one server supported')
 
     def __del__(self):
         self.close()
@@ -109,17 +129,18 @@ class Memcache:
         else:
             command = bytes('get {0}\r\n'.format(key))
 
-        self.servers[0].send_command(command)
+        server = self.selector.select(self.servers, self.hasher)
 
-        data = self.servers[0].read_until(b'\r\n').rstrip().split()
+        server.send_command(command)
+        data = server.read_until(b'\r\n').rstrip().split()
         if data[0] != b'VALUE':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
         key, flags, length = data[1:]
         length = int(length)
         flags = int(flags)
-        body = self.servers[0].read_length(length)
-        data = self.servers[0].read_until(b'\r\n')   # trailing termination
-        data = self.servers[0].read_until(b'\r\n')
+        body = server.read_length(length)
+        data = server.read_until(b'\r\n')   # trailing termination
+        data = server.read_until(b'\r\n')
         if data != b'END\r\n':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
 
@@ -132,8 +153,9 @@ class Memcache:
         seconds, that this key's data expires.
         '''
 
-        if not self.servers[0].backend:
-            self.servers[0].connect()
+        server = self.selector.select(self.servers, self.hasher)
+        if not server.backend:
+            server.connect()
 
         if PY3:
             command = bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
@@ -142,9 +164,9 @@ class Memcache:
         else:
             command = bytes('set {0} {1} {2} {3}\r\n'.format(key, flags,
                     exptime, len(value))) + bytes(value) + b'\r\n'
-        self.servers[0].send_command(command)
+        server.send_command(command)
 
-        data = self.servers[0].read_until(b'\r\n')
+        data = server.read_until(b'\r\n')
 
         if data == b'STORED\r\n':
             return
