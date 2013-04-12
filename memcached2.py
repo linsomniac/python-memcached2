@@ -78,18 +78,12 @@ class MemcacheValue(bytes):
 
 class HasherNone:
     '''Hasher that always returns None, useful only for SelectorFirst.'''
-    def __init__(self):
-        pass
-
     def hash(self, key):
         return None
 
 
 class HasherCMemcache:
     '''Hasher compatible with the C memcache hash function'''
-    def __init__(self):
-        pass
-
     def hash(self, key):
         key = _to_bytes(key)
         return ((((crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
@@ -98,9 +92,6 @@ class HasherCMemcache:
 class SelectorFirst:
     '''Server selector that only returns the first server.  Useful when there
     is only one server to select amongst.'''
-    def __init__(self):
-        pass
-
     def select(self, server_list, hasher):
         server = server_list[0]
         if not server.backend:
