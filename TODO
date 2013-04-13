@@ -2,5 +2,4 @@ Make "get" accept multiple keys (see "get <key>*" in protocol docs).
 Additional commands to Memcache class.
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
-Abstract out command sending code.
 Decide on automatic pickling.
