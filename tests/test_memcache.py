@@ -63,4 +63,30 @@ class test_ServerConnection(unittest.TestCase):
         memcache.set('foo', 'bar')
         memcache.get('foo')
 
+    def test_StorageCommands(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.set('foo', 'bar')
+        result = memcache.get('foo')
+        self.assertEqual(result, b'bar')
+
+        with self.assertRaises(memcached2.NotStored):
+            memcache.add('foo', '2')
+        memcache.add('second_key', 'xyzzy')
+        self.assertEqual(memcache.get('second_key'), b'xyzzy')
+
+        memcache.replace('foo', 'rev2bar')
+        self.assertEqual(memcache.get('foo'), b'rev2bar')
+        with self.assertRaises(memcached2.NotStored):
+            memcache.replace('unset_key', 'xyzzy')
+
+        memcache.append('foo', '>>>')
+        memcache.prepend('foo', '<<<')
+        self.assertEqual(memcache.get('foo'), b'<<<rev2bar>>>')
+        with self.assertRaises(memcached2.NotStored):
+            memcache.append('test_append', '>>>')
+        with self.assertRaises(memcached2.NotStored):
+            memcache.prepend('test_prepend', '<<<')
+
+        memcache.close()
+
 unittest.main()

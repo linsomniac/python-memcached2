@@ -225,14 +225,14 @@ class Memcache:
     def append(self, key, value):
         '''Store data after existing data associated with this key.
         '''
-        command = 'append {0} {1}\r\n'.format(key,
+        command = 'append {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
         return self._storage_command(command)
 
     def prepend(self, key, value):
         '''Store data before existing data associated with this key.
         '''
-        command = 'prepend {0} {1}\r\n'.format(key,
+        command = 'prepend {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
         return self._storage_command(command)
 
@@ -245,12 +245,12 @@ class Memcache:
 
         if data == b'STORED\r\n':
             return
-        if data == b'NOT STORED\r\n':
-            raise NotStored('During set()')
+        if data == b'NOT_STORED\r\n':
+            raise NotStored()
         if data == b'EXISTS\r\n':
-            raise Exists('During set()')
+            raise Exists()
         if data == b'NOT FOUND\r\n':
-            raise NotFound('During set()')
+            raise NotFound()
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(data))
