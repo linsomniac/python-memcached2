@@ -186,14 +186,60 @@ class Memcache:
 
         return MemcacheValue(body, key, flags)
 
-    def set(self, key, value, flags=0, exptime=0):
+    def set(self, key, value, flags=0, exptime=0, cas_unique=None):
         '''Set a key to the value in the memcache server.  If the "flags"
         are specified, those same flags will be provided on return.  If
         "exptime" is set to non-zero, it specifies the expriation time, in
-        seconds, that this key's data expires.
+        seconds, that this key's data expires.  If "cas_unique" is given,
+        it is a 64-bit integer from gets(), the set is only done if the
+        value has not been updated since the get.
         '''
-        server = self._send_command('set {0} {1} {2} {3}\r\n'.format(key,
-                flags, exptime, len(value)) + value + '\r\n')
+        if cas_unique:
+            command = 'cas {0} {1} {2} {3} {4}\r\n'.format(key,
+                    flags, exptime, len(value), cas_unique) + value + '\r\n'
+        else:
+            command = 'set {0} {1} {2} {3}\r\n'.format(key,
+                    flags, exptime, len(value)) + value + '\r\n'
+        return self._storage_command(command)
+
+    def add(self, key, value, flags=0, exptime=0):
+        '''Store, but only if the server doesn't already hold data for it.
+        If the "flags" are specified, those same flags will be provided
+        on return.  If "exptime" is set to non-zero, it specifies the
+        expriation time, in seconds, that this key's data expires.
+        '''
+        command = 'add {0} {1} {2} {3}\r\n'.format(key,
+                flags, exptime, len(value)) + value + '\r\n'
+        return self._storage_command(command)
+
+    def replace(self, key, value, flags=0, exptime=0):
+        '''Store data, but only if the server already holds data for it.
+        If the "flags" are specified, those same flags will be provided
+        on return.  If "exptime" is set to non-zero, it specifies the
+        expriation time, in seconds, that this key's data expires.
+        '''
+        command = 'replace {0} {1} {2} {3}\r\n'.format(key,
+                flags, exptime, len(value)) + value + '\r\n'
+        return self._storage_command(command)
+
+    def append(self, key, value):
+        '''Store data after existing data associated with this key.
+        '''
+        command = 'append {0} {1}\r\n'.format(key,
+                len(value)) + value + '\r\n'
+        return self._storage_command(command)
+
+    def prepend(self, key, value):
+        '''Store data before existing data associated with this key.
+        '''
+        command = 'prepend {0} {1}\r\n'.format(key,
+                len(value)) + value + '\r\n'
+        return self._storage_command(command)
+
+    def _storage_command(self, command):
+        '''INTERNAL: Storage command back-end.
+        '''
+        server = self._send_command(command)
 
         data = server.read_until(b'\r\n')
 
