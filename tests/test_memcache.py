@@ -109,4 +109,18 @@ class test_ServerConnection(unittest.TestCase):
 
         memcache.close()
 
+    def test_Cas(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.set('foo', 'bar')
+        result = memcache.get('foo', get_cas=True)
+
+        memcache.set('foo', 'baz', cas_unique=result.cas_unique)
+
+        result2 = memcache.get('foo', get_cas=True)
+        self.assertEqual(result2, b'baz')
+
+        with self.assertRaises(memcached2.CASFailure):
+            memcache.set('foo', 'qux', cas_unique=result.cas_unique)
+        self.assertEqual(memcache.get('foo', get_cas=True), b'baz')
+
 unittest.main()

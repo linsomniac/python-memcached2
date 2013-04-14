@@ -62,9 +62,9 @@ class NotStored(StoreException):
     condition for an "add" or "replace" was not met'''
 
 
-class Exists(StoreException):
+class CASFailure(StoreException):
     '''Item you are trying to store with a "cas" command has been modified
-    since you last fetched it'''
+    since you last fetched it (result=EXISTS)'''
 
 
 class NotFound(StoreException):
@@ -77,9 +77,9 @@ class MemcacheValue(bytes):
 
     def __new__(self, value, key, flags, cas_unique=None):
         data = super(MemcacheValue, self).__new__(self, value)
-        self.key = key
-        self.flags = flags
-        self.cas_unique = cas_unique
+        data.key = key
+        data.flags = flags
+        data.cas_unique = cas_unique
 
         return data
 
@@ -166,14 +166,18 @@ class Memcache:
         server.send_command(command)
         return server
 
-    def get(self, key):
+    def get(self, key, get_cas=False):
         '''Retrieve the specified key from a memcache server.  Returns
         the value read from the server, as a "MemcacheValue" object
         which includes attributes specifying the key and flags, otherwise
-        it acts like a string.
+        it acts like a string.  If "get_cas" is true, the "cas_unique"
+        value is queried and stored in the return data.
         '''
 
-        server = self._send_command('get {0}\r\n'.format(key))
+        if get_cas:
+            server = self._send_command('gets {0}\r\n'.format(key))
+        else:
+            server = self._send_command('get {0}\r\n'.format(key))
 
         data = server.read_until(b'\r\n')
         if data == b'END\r\n':
@@ -181,9 +185,14 @@ class Memcache:
 
         if not data.startswith(b'VALUE'):
             raise ValueError('Unknown response: {0}'.format(repr(data)))
-        key, flags, length = data.rstrip().split()[1:]
-        length = int(length)
-        flags = int(flags)
+        split_data = data.rstrip().split()[1:]
+        key = split_data[0]
+        flags = int(split_data[1])
+        length = int(split_data[2])
+        if len(split_data) > 3:
+            cas_unique = int(split_data[3])
+        else:
+            cas_unique = None
         body = server.read_length(length)
 
         data = server.read_until(b'\r\n')   # trailing termination
@@ -195,15 +204,15 @@ class Memcache:
         if data != b'END\r\n':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
 
-        return MemcacheValue(body, key, flags)
+        return MemcacheValue(body, key, flags, cas_unique)
 
     def set(self, key, value, flags=0, exptime=0, cas_unique=None):
         '''Set a key to the value in the memcache server.  If the "flags"
         are specified, those same flags will be provided on return.  If
         "exptime" is set to non-zero, it specifies the expriation time, in
         seconds, that this key's data expires.  If "cas_unique" is given,
-        it is a 64-bit integer from gets(), the set is only done if the
-        value has not been updated since the get.
+        it is a 64-bit integer from get(key, get_cas=True), the set is only
+        done if the value has not been updated since the get.
         '''
         if cas_unique:
             command = 'cas {0} {1} {2} {3} {4}\r\n'.format(key,
@@ -259,7 +268,7 @@ class Memcache:
         if data == b'NOT_STORED\r\n':
             raise NotStored()
         if data == b'EXISTS\r\n':
-            raise Exists()
+            raise CASFailure()
         if data == b'NOT FOUND\r\n':
             raise NotFound()
 
