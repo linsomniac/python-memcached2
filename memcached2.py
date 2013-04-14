@@ -307,6 +307,43 @@ class Memcache:
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(repr(data)))
 
+    def stats(self):
+        '''Get statistics from the memcache server, returns a dictionary of
+        key/value pairs received from the server.
+        '''
+        command = 'stats\r\n'
+
+        server = self._send_command(command)
+        stats = {}
+        while True:
+            data = server.read_until(b'\r\n')
+            if data == b'END\r\n':
+                break
+            prefix, key, value = data.strip().split()
+            if prefix != b'STAT':
+                raise NotImplementedError('Unknown stats data: {0}'
+                        .format(repr(data)))
+            if value in [b'pid', b'uptime', b'time', b'pointer_size',
+                    b'curr_items', b'total_items', b'bytes',
+                    b'curr_connections', b'total_connections',
+                    b'connection_structures', b'reserved_fds', b'cmd_get',
+                    b'cmd_set', b'cmd_flush', b'cmd_hits', b'cmd_misses',
+                    b'delete_misses', b'delete_hits', b'incr_misses',
+                    b'incr_hits', b'decr_misses', b'decr_hits', b'cas_misses',
+                    b'cas_hits', b'cas_badval', b'touch_hits',
+                    b'touch_misses', b'auth_cmds', b'auth_errors',
+                    b'evictions', b'reclaimed', b'bytes_read',
+                    b'bytes_written', b'limit_maxbytes', b'threads',
+                    b'conn_yields', b'hash_power_level', b'hash_bytes',
+                    b'expired_unfetched', b'evicted_unfetched',
+                    b'slabs_moved']:
+                value = int(value)
+            if value in [b'rusage_user', b'rusage_system']:
+                value = float(value)
+            stats[key] = value
+
+        return stats
+
     def incr(self, key, value):
         '''Increment the value for the key, treated as a 64-bit unsigned value.
         Return the new value.

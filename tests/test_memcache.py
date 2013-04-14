@@ -172,4 +172,8 @@ class test_ServerConnection(unittest.TestCase):
         with self.assertRaises(memcached2.NonNumeric):
             memcache.decr('baz', 1)
 
+    def test_Stats(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.stats()
+
 unittest.main()
