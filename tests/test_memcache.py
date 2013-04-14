@@ -123,4 +123,14 @@ class test_ServerConnection(unittest.TestCase):
             memcache.set('foo', 'qux', cas_unique=result.cas_unique)
         self.assertEqual(memcache.get('foo', get_cas=True), b'baz')
 
+    def test_Delete(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.set('foo', 'bar')
+        self.assertEqual(memcache.get('foo'), b'bar')
+        memcache.delete('foo')
+        with self.assertRaises(memcached2.NoValue):
+            memcache.get('foo')
+        with self.assertRaises(memcached2.NotFound):
+            memcache.delete('foo')
+
 unittest.main()

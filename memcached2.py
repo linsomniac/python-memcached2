@@ -256,6 +256,22 @@ class Memcache:
                 len(value)) + value + '\r\n'
         return self._storage_command(command)
 
+    def delete(self, key):
+        '''Delete the key if it exists.
+        '''
+        command = 'delete {0}\r\n'.format(key)
+
+        server = self._send_command(command)
+        data = server.read_until(b'\r\n')
+
+        if data == b'DELETED\r\n':
+            return
+        if data == b'NOT_FOUND\r\n':
+            raise NotFound()
+
+        raise NotImplementedError('Unknown return data from server: "{0}"'
+                .format(repr(data)))
+
     def _storage_command(self, command):
         '''INTERNAL: Storage command back-end.
         '''
@@ -273,7 +289,7 @@ class Memcache:
             raise NotFound()
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
-                .format(data))
+                .format(repr(data)))
 
     def close(self):
         '''Close the connection to the backend servers.
