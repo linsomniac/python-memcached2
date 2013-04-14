@@ -174,6 +174,11 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_Stats(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.set('foo', 'a')
         memcache.stats()
+        memcache.stats_settings()
+        memcache.stats_items()
+        self.assertEqual(memcache.stats_sizes(), [(64, 1)])
+        memcache.stats_slabs()
 
 unittest.main()

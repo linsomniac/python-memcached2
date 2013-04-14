@@ -29,6 +29,16 @@ def _to_bytes(data):
     return data
 
 
+def _to_bool(s):
+    '''INTERNAL: Convert a stats boolean string into boolean.'''
+    if s in [b'0', b'no']:
+        return False
+    if s in [b'1', b'yes']:
+        return True
+    raise NotImplementedError('Unknown boolean value {0}'
+            .format(repr(s)))
+
+
 class Memcached2Exception(Exception):
     '''Base exception that all other exceptions inherit from'''
 
@@ -323,7 +333,7 @@ class Memcache:
             if prefix != b'STAT':
                 raise NotImplementedError('Unknown stats data: {0}'
                         .format(repr(data)))
-            if value in [b'pid', b'uptime', b'time', b'pointer_size',
+            if key in [b'pid', b'uptime', b'time', b'pointer_size',
                     b'curr_items', b'total_items', b'bytes',
                     b'curr_connections', b'total_connections',
                     b'connection_structures', b'reserved_fds', b'cmd_get',
@@ -338,9 +348,130 @@ class Memcache:
                     b'expired_unfetched', b'evicted_unfetched',
                     b'slabs_moved']:
                 value = int(value)
-            if value in [b'rusage_user', b'rusage_system']:
+            if key in [b'rusage_user', b'rusage_system']:
                 value = float(value)
             stats[key] = value
+
+        return stats
+
+    def stats_items(self):
+        '''Gets statistics about items storage per slab class.  Returns a
+        dictionary of slab classes, each containing key/value pairs received
+        from the server.
+        '''
+        command = 'stats items\r\n'
+
+        server = self._send_command(command)
+        stats = {}
+        while True:
+            data = server.read_until(b'\r\n')
+            if data == b'END\r\n':
+                break
+            prefix, key, value = data.strip().split()
+            if prefix != b'STAT':
+                raise NotImplementedError('Unknown stats data: {0}'
+                        .format(repr(data)))
+            prefix, slab_key, stat_key = key.split(b':')
+            if prefix != b'items':
+                raise NotImplementedError('Unknown stats item key: {0}'
+                        .format(repr(key)))
+            if not slab_key in stats:
+                stats[slab_key] = {}
+            if stat_key in [b'number', b'age', b'evicted', b'evicted_nonzero',
+                    b'evicted_time', b'outofmemory', b'tailrepairs',
+                    b'reclaimed', b'expired_unfetched', b'evicted_unfetched']:
+                value = int(value)
+            stats[slab_key][stat_key] = value
+
+        return stats
+
+    def stats_slabs(self):
+        '''Gets information about each of the slabs created during memcached
+        runtime.  Returns a dictionary of slab IDs, each contains a dictionary
+        of key/value pairs for that slab.
+        '''
+        command = 'stats slabs\r\n'
+
+        server = self._send_command(command)
+        stats = {'slabs': {}}
+        while True:
+            data = server.read_until(b'\r\n')
+            if data == b'END\r\n':
+                break
+            prefix, key, value = data.strip().split()
+            if prefix != b'STAT':
+                raise NotImplementedError('Unknown stats data: {0}'
+                        .format(repr(data)))
+
+            if b':' in key:
+                slab_key, stat_key = key.split(b':')
+                if not slab_key in stats['slabs']:
+                    stats['slabs'][slab_key] = {}
+                if stat_key in [b'chunk_size', b'chunks_per_page',
+                        b'total_pages', b'total_chunks', b'used_chunks',
+                        b'free_chunks', b'free_chunks_end', b'mem_requested',
+                        b'get_hits', b'cmd_set', b'delete_hits', b'incr_hits',
+                        b'decr_hits', b'cas_hits', b'cas_badval',
+                        b'touch_hits']:
+                    value = int(value)
+                stats['slabs'][slab_key][stat_key] = value
+            else:
+                if key in [b'active_slabs', b'total_malloced']:
+                    value = int(value)
+                stats[key] = value
+
+        return stats
+
+    def stats_settings(self):
+        '''Gets statistics about settings (primarily from processing
+        command-line arguments), returns a dictionary of key/value pairs
+        received from the server.
+        '''
+        command = 'stats settings\r\n'
+
+        server = self._send_command(command)
+        stats = {}
+        while True:
+            data = server.read_until(b'\r\n')
+            if data == b'END\r\n':
+                break
+            prefix, key, value = data.strip().split()
+            if prefix != b'STAT':
+                raise NotImplementedError('Unknown stats data: {0}'
+                        .format(repr(data)))
+            if key in [b'maxbytes', b'maxconns', b'tcpport', b'udpport',
+                    b'verbosity', b'oldest', b'umask', b'chunk_size',
+                    b'num_threads', b'num_threads_per_udp', b'reqs_per_event',
+                    b'tcp_backlog', b'item_size_max', b'hashpower_init']:
+                value = int(value)
+            if key in [b'growth_factor']:
+                value = float(value)
+            if key in [b'maxconns_fast', b'slab_reassign', b'slab_automove',
+                    b'detail_enabled', b'cas_enabled']:
+                value = _to_bool(value)
+            stats[key] = value
+
+        return stats
+
+    def stats_sizes(self):
+        '''Get statistics about object sizes, sizes grouped by chunks of
+        32-bits.  WARNING: This operation locks the cache while it iterates
+        over all objects.  Returns a list of (size,count) tuples received
+        from the server.
+        '''
+        command = 'stats sizes\r\n'
+
+        server = self._send_command(command)
+        stats = []
+        while True:
+            data = server.read_until(b'\r\n')
+            if data == b'END\r\n':
+                break
+            prefix, key, value = data.strip().split()
+            if prefix != b'STAT':
+                raise NotImplementedError('Unknown stats data: {0}'
+                        .format(repr(data)))
+            stats.append((int(key), int(value)))
 
         return stats
 
