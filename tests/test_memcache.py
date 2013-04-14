@@ -133,4 +133,8 @@ class test_ServerConnection(unittest.TestCase):
         with self.assertRaises(memcached2.NotFound):
             memcache.delete('foo')
 
+    def test_FlushAll(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.flush_all()
+
 unittest.main()

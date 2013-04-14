@@ -272,6 +272,20 @@ class Memcache:
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(repr(data)))
 
+    def flush_all(self):
+        '''Flush the memcache server.
+        '''
+        command = 'flush_all\r\n'
+
+        server = self._send_command(command)
+        data = server.read_until(b'\r\n')
+
+        if data == b'OK\r\n':
+            return
+
+        raise NotImplementedError('Unknown return data from server: "{0}"'
+                .format(repr(data)))
+
     def _storage_command(self, command):
         '''INTERNAL: Storage command back-end.
         '''
