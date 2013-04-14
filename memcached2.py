@@ -22,6 +22,13 @@ if not PY3:
     ConnectionResetError = socket.error
 
 
+def _from_bytes(data):
+    '''INTERNAL: Convert bytes to a regular string.'''
+    if PY3:
+        return str(data, 'ascii')
+    return str(data)
+
+
 def _to_bytes(data):
     '''Internal: Convert something to bytes type.'''
     if PY3:
@@ -31,9 +38,9 @@ def _to_bytes(data):
 
 def _to_bool(s):
     '''INTERNAL: Convert a stats boolean string into boolean.'''
-    if s in [b'0', b'no']:
+    if s in ['0', 'no']:
         return False
-    if s in [b'1', b'yes']:
+    if s in ['1', 'yes']:
         return True
     raise NotImplementedError('Unknown boolean value {0}'
             .format(repr(s)))
@@ -326,29 +333,29 @@ class Memcache:
         server = self._send_command(command)
         stats = {}
         while True:
-            data = server.read_until(b'\r\n')
-            if data == b'END\r\n':
+            data = _from_bytes(server.read_until(b'\r\n'))
+            if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
-            if prefix != b'STAT':
+            if prefix != 'STAT':
                 raise NotImplementedError('Unknown stats data: {0}'
                         .format(repr(data)))
-            if key in [b'pid', b'uptime', b'time', b'pointer_size',
-                    b'curr_items', b'total_items', b'bytes',
-                    b'curr_connections', b'total_connections',
-                    b'connection_structures', b'reserved_fds', b'cmd_get',
-                    b'cmd_set', b'cmd_flush', b'cmd_hits', b'cmd_misses',
-                    b'delete_misses', b'delete_hits', b'incr_misses',
-                    b'incr_hits', b'decr_misses', b'decr_hits', b'cas_misses',
-                    b'cas_hits', b'cas_badval', b'touch_hits',
-                    b'touch_misses', b'auth_cmds', b'auth_errors',
-                    b'evictions', b'reclaimed', b'bytes_read',
-                    b'bytes_written', b'limit_maxbytes', b'threads',
-                    b'conn_yields', b'hash_power_level', b'hash_bytes',
-                    b'expired_unfetched', b'evicted_unfetched',
-                    b'slabs_moved']:
+            if key in ['pid', 'uptime', 'time', 'pointer_size',
+                    'curr_items', 'total_items', 'bytes',
+                    'curr_connections', 'total_connections',
+                    'connection_structures', 'reserved_fds', 'cmd_get',
+                    'cmd_set', 'cmd_flush', 'cmd_hits', 'cmd_misses',
+                    'delete_misses', 'delete_hits', 'incr_misses',
+                    'incr_hits', 'decr_misses', 'decr_hits', 'cas_misses',
+                    'cas_hits', 'cas_badval', 'touch_hits',
+                    'touch_misses', 'auth_cmds', 'auth_errors',
+                    'evictions', 'reclaimed', 'bytes_read',
+                    'bytes_written', 'limit_maxbytes', 'threads',
+                    'conn_yields', 'hash_power_level', 'hash_bytes',
+                    'expired_unfetched', 'evicted_unfetched',
+                    'slabs_moved']:
                 value = int(value)
-            if key in [b'rusage_user', b'rusage_system']:
+            if key in ['rusage_user', 'rusage_system']:
                 value = float(value)
             stats[key] = value
 
@@ -364,22 +371,22 @@ class Memcache:
         server = self._send_command(command)
         stats = {}
         while True:
-            data = server.read_until(b'\r\n')
-            if data == b'END\r\n':
+            data = _from_bytes(server.read_until(b'\r\n'))
+            if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
-            if prefix != b'STAT':
+            if prefix != 'STAT':
                 raise NotImplementedError('Unknown stats data: {0}'
                         .format(repr(data)))
-            prefix, slab_key, stat_key = key.split(b':')
-            if prefix != b'items':
+            prefix, slab_key, stat_key = key.split(':')
+            if prefix != 'items':
                 raise NotImplementedError('Unknown stats item key: {0}'
                         .format(repr(key)))
             if not slab_key in stats:
                 stats[slab_key] = {}
-            if stat_key in [b'number', b'age', b'evicted', b'evicted_nonzero',
-                    b'evicted_time', b'outofmemory', b'tailrepairs',
-                    b'reclaimed', b'expired_unfetched', b'evicted_unfetched']:
+            if stat_key in ['number', 'age', 'evicted', 'evicted_nonzero',
+                    'evicted_time', 'outofmemory', 'tailrepairs',
+                    'reclaimed', 'expired_unfetched', 'evicted_unfetched']:
                 value = int(value)
             stats[slab_key][stat_key] = value
 
@@ -395,28 +402,28 @@ class Memcache:
         server = self._send_command(command)
         stats = {'slabs': {}}
         while True:
-            data = server.read_until(b'\r\n')
-            if data == b'END\r\n':
+            data = _from_bytes(server.read_until(b'\r\n'))
+            if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
-            if prefix != b'STAT':
+            if prefix != 'STAT':
                 raise NotImplementedError('Unknown stats data: {0}'
                         .format(repr(data)))
 
-            if b':' in key:
-                slab_key, stat_key = key.split(b':')
+            if ':' in key:
+                slab_key, stat_key = key.split(':')
                 if not slab_key in stats['slabs']:
                     stats['slabs'][slab_key] = {}
-                if stat_key in [b'chunk_size', b'chunks_per_page',
-                        b'total_pages', b'total_chunks', b'used_chunks',
-                        b'free_chunks', b'free_chunks_end', b'mem_requested',
-                        b'get_hits', b'cmd_set', b'delete_hits', b'incr_hits',
-                        b'decr_hits', b'cas_hits', b'cas_badval',
-                        b'touch_hits']:
+                if stat_key in ['chunk_size', 'chunks_per_page',
+                        'total_pages', 'total_chunks', 'used_chunks',
+                        'free_chunks', 'free_chunks_end', 'mem_requested',
+                        'get_hits', 'cmd_set', 'delete_hits', 'incr_hits',
+                        'decr_hits', 'cas_hits', 'cas_badval',
+                        'touch_hits']:
                     value = int(value)
                 stats['slabs'][slab_key][stat_key] = value
             else:
-                if key in [b'active_slabs', b'total_malloced']:
+                if key in ['active_slabs', 'total_malloced']:
                     value = int(value)
                 stats[key] = value
 
@@ -432,22 +439,22 @@ class Memcache:
         server = self._send_command(command)
         stats = {}
         while True:
-            data = server.read_until(b'\r\n')
-            if data == b'END\r\n':
+            data = _from_bytes(server.read_until(b'\r\n'))
+            if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
-            if prefix != b'STAT':
+            if prefix != 'STAT':
                 raise NotImplementedError('Unknown stats data: {0}'
                         .format(repr(data)))
-            if key in [b'maxbytes', b'maxconns', b'tcpport', b'udpport',
-                    b'verbosity', b'oldest', b'umask', b'chunk_size',
-                    b'num_threads', b'num_threads_per_udp', b'reqs_per_event',
-                    b'tcp_backlog', b'item_size_max', b'hashpower_init']:
+            if key in ['maxbytes', 'maxconns', 'tcpport', 'udpport',
+                    'verbosity', 'oldest', 'umask', 'chunk_size',
+                    'num_threads', 'num_threads_per_udp', 'reqs_per_event',
+                    'tcp_backlog', 'item_size_max', 'hashpower_init']:
                 value = int(value)
-            if key in [b'growth_factor']:
+            if key in ['growth_factor']:
                 value = float(value)
-            if key in [b'maxconns_fast', b'slab_reassign', b'slab_automove',
-                    b'detail_enabled', b'cas_enabled']:
+            if key in ['maxconns_fast', 'slab_reassign', 'slab_automove',
+                    'detail_enabled', 'cas_enabled']:
                 value = _to_bool(value)
             stats[key] = value
 
@@ -464,11 +471,11 @@ class Memcache:
         server = self._send_command(command)
         stats = []
         while True:
-            data = server.read_until(b'\r\n')
-            if data == b'END\r\n':
+            data = _from_bytes(server.read_until(b'\r\n'))
+            if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
-            if prefix != b'STAT':
+            if prefix != 'STAT':
                 raise NotImplementedError('Unknown stats data: {0}'
                         .format(repr(data)))
             stats.append((int(key), int(value)))
