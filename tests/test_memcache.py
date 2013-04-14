@@ -153,4 +153,23 @@ class test_ServerConnection(unittest.TestCase):
         with self.assertRaises(memcached2.NotFound):
             memcache.touch('foo', exptime=0)
 
+    def test_IncrDecr(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        with self.assertRaises(memcached2.NotFound):
+            memcache.incr('foo', 1)
+        memcache.set('foo', 'a')
+        with self.assertRaises(memcached2.NonNumeric):
+            memcache.incr('foo', 1)
+        memcache.set('foo', '1')
+        self.assertEqual(memcache.incr('foo', 1), 2)
+        self.assertEqual(memcache.get('foo'), b'2')
+        self.assertEqual(memcache.decr('foo', 1), 1)
+        self.assertEqual(memcache.get('foo'), b'1')
+
+        with self.assertRaises(memcached2.NotFound):
+            memcache.decr('baz', 1)
+        memcache.set('baz', 'a')
+        with self.assertRaises(memcached2.NonNumeric):
+            memcache.decr('baz', 1)
+
 unittest.main()

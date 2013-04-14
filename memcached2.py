@@ -71,6 +71,10 @@ class NotFound(StoreException):
     '''Item you are trying to store with a "cas" command does not exist'''
 
 
+class NonNumeric(StoreException):
+    '''The item you are trying to incr/decr is not numeric.'''
+
+
 class MemcacheValue(bytes):
     '''Wrapper around Memcache value results, to augment the return data to
     include the additional information (flags, key, cas_unique)'''
@@ -299,6 +303,39 @@ class Memcache:
 
         if data == b'OK\r\n':
             return
+
+        raise NotImplementedError('Unknown return data from server: "{0}"'
+                .format(repr(data)))
+
+    def incr(self, key, value):
+        '''Increment the value for the key, treated as a 64-bit unsigned value.
+        Return the new value.
+        '''
+        command = 'incr {0} {1}\r\n'.format(key, value)
+        return self._incrdecr_command(command)
+
+    def decr(self, key, value):
+        '''Decrement the value for the key, treated as a 64-bit unsigned value.
+        Return the new value.
+        '''
+        command = 'decr {0} {1}\r\n'.format(key, value)
+        return self._incrdecr_command(command)
+
+    def _incrdecr_command(self, command):
+        '''INTERNAL: Increment/decrement command back-end.
+        '''
+        server = self._send_command(command)
+        data = server.read_until(b'\r\n')
+
+        #  <NEW_VALUE>\r\n
+        if data[0] in b'0123456789':
+            return int(data.strip())
+        if data == b'NOT_FOUND\r\n':
+            raise NotFound()
+        client_error = (b'CLIENT_ERROR cannot increment or decrement '
+                b'non-numeric value\r\n')
+        if data == client_error:
+            raise NonNumeric()
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(repr(data)))
