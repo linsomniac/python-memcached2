@@ -22,6 +22,10 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_SetAndGet(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
+
+        with self.assertRaises(memcached2.NoValue):
+            result = memcache.get('foo')
+
         memcache.set('foo', 'bar')
         result = memcache.get('foo')
         self.assertEqual(result, b'bar')
@@ -62,6 +66,22 @@ class test_ServerConnection(unittest.TestCase):
                 .format(server.port),))
         memcache.set('foo', 'bar')
         memcache.get('foo')
+
+    def test_TestFlagsAndExptime(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+
+        memcache.set('foo', 'xXx', flags=12, exptime=1)
+        result = memcache.get('foo')
+        self.assertEqual(result, b'xXx')
+        self.assertEqual(result.flags, 12)
+
+        import time
+        time.sleep(2)
+
+        with self.assertRaises(memcached2.NoValue):
+            result = memcache.get('foo')
+
+        memcache.close()
 
     def test_StorageCommands(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))

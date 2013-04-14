@@ -45,6 +45,14 @@ class BackendDisconnect(Memcached2Exception):
     '''The backend connection closed'''
 
 
+class RetrieveException(Memcached2Exception):
+    '''Base class for retrieve related exceptions.'''
+
+
+class NoValue(RetrieveException):
+    '''No value retrieved.'''
+
+
 class StoreException(Memcached2Exception):
     '''Base class for storage related exceptions.'''
 
@@ -167,10 +175,13 @@ class Memcache:
 
         server = self._send_command('get {0}\r\n'.format(key))
 
-        data = server.read_until(b'\r\n').rstrip().split()
-        if data[0] != b'VALUE':
+        data = server.read_until(b'\r\n')
+        if data == b'END\r\n':
+            raise NoValue()
+
+        if not data.startswith(b'VALUE'):
             raise ValueError('Unknown response: {0}'.format(repr(data)))
-        key, flags, length = data[1:]
+        key, flags, length = data.rstrip().split()[1:]
         length = int(length)
         flags = int(flags)
         body = server.read_length(length)
