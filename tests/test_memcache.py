@@ -137,4 +137,20 @@ class test_ServerConnection(unittest.TestCase):
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.flush_all()
 
+    def test_Touch(self):
+        import time
+
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.set('foo', 'bar', exptime=1)
+        self.assertEqual(memcache.get('foo'), b'bar')
+        memcache.touch('foo', exptime=5)
+        time.sleep(2)
+        self.assertEqual(memcache.get('foo'), b'bar')
+        memcache.touch('foo', exptime=1)
+        time.sleep(2)
+        with self.assertRaises(memcached2.NoValue):
+            memcache.get('foo')
+        with self.assertRaises(memcached2.NotFound):
+            memcache.touch('foo', exptime=0)
+
 unittest.main()

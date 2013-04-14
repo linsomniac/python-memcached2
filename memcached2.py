@@ -272,6 +272,23 @@ class Memcache:
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(repr(data)))
 
+    def touch(self, key, exptime):
+        '''Update the expiration time on an item.  Note that setting
+        exptime=0 causes the item not to expire based on time.
+        '''
+        command = 'touch {0} {1}\r\n'.format(key, exptime)
+
+        server = self._send_command(command)
+        data = server.read_until(b'\r\n')
+
+        if data == b'TOUCHED\r\n':
+            return
+        if data == b'NOT_FOUND\r\n':
+            raise NotFound()
+
+        raise NotImplementedError('Unknown return data from server: "{0}"'
+                .format(repr(data)))
+
     def flush_all(self):
         '''Flush the memcache server.
         '''
