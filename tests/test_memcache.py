@@ -28,8 +28,8 @@ class test_ServerConnection(unittest.TestCase):
 
         memcache.set('foo', 'bar')
         result = memcache.get('foo')
-        self.assertEqual(result, b'bar')
-        self.assertEqual(result.key, b'foo')
+        self.assertEqual(result, 'bar')
+        self.assertEqual(result.key, 'foo')
         self.assertEqual(result.flags, 0)
         memcache.close()
 
@@ -72,7 +72,7 @@ class test_ServerConnection(unittest.TestCase):
 
         memcache.set('foo', 'xXx', flags=12, exptime=1)
         result = memcache.get('foo')
-        self.assertEqual(result, b'xXx')
+        self.assertEqual(result, 'xXx')
         self.assertEqual(result.flags, 12)
 
         import time
@@ -87,21 +87,21 @@ class test_ServerConnection(unittest.TestCase):
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.set('foo', 'bar')
         result = memcache.get('foo')
-        self.assertEqual(result, b'bar')
+        self.assertEqual(result, 'bar')
 
         with self.assertRaises(memcached2.NotStored):
             memcache.add('foo', '2')
         memcache.add('second_key', 'xyzzy')
-        self.assertEqual(memcache.get('second_key'), b'xyzzy')
+        self.assertEqual(memcache.get('second_key'), 'xyzzy')
 
         memcache.replace('foo', 'rev2bar')
-        self.assertEqual(memcache.get('foo'), b'rev2bar')
+        self.assertEqual(memcache.get('foo'), 'rev2bar')
         with self.assertRaises(memcached2.NotStored):
             memcache.replace('unset_key', 'xyzzy')
 
         memcache.append('foo', '>>>')
         memcache.prepend('foo', '<<<')
-        self.assertEqual(memcache.get('foo'), b'<<<rev2bar>>>')
+        self.assertEqual(memcache.get('foo'), '<<<rev2bar>>>')
         with self.assertRaises(memcached2.NotStored):
             memcache.append('test_append', '>>>')
         with self.assertRaises(memcached2.NotStored):
@@ -117,16 +117,16 @@ class test_ServerConnection(unittest.TestCase):
         memcache.set('foo', 'baz', cas_unique=result.cas_unique)
 
         result2 = memcache.get('foo', get_cas=True)
-        self.assertEqual(result2, b'baz')
+        self.assertEqual(result2, 'baz')
 
         with self.assertRaises(memcached2.CASFailure):
             memcache.set('foo', 'qux', cas_unique=result.cas_unique)
-        self.assertEqual(memcache.get('foo', get_cas=True), b'baz')
+        self.assertEqual(memcache.get('foo', get_cas=True), 'baz')
 
     def test_Delete(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.set('foo', 'bar')
-        self.assertEqual(memcache.get('foo'), b'bar')
+        self.assertEqual(memcache.get('foo'), 'bar')
         memcache.delete('foo')
         with self.assertRaises(memcached2.NoValue):
             memcache.get('foo')
@@ -142,10 +142,10 @@ class test_ServerConnection(unittest.TestCase):
 
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.set('foo', 'bar', exptime=1)
-        self.assertEqual(memcache.get('foo'), b'bar')
+        self.assertEqual(memcache.get('foo'), 'bar')
         memcache.touch('foo', exptime=5)
         time.sleep(2)
-        self.assertEqual(memcache.get('foo'), b'bar')
+        self.assertEqual(memcache.get('foo'), 'bar')
         memcache.touch('foo', exptime=1)
         time.sleep(2)
         with self.assertRaises(memcached2.NoValue):
@@ -162,9 +162,9 @@ class test_ServerConnection(unittest.TestCase):
             memcache.incr('foo', 1)
         memcache.set('foo', '1')
         self.assertEqual(memcache.incr('foo', 1), 2)
-        self.assertEqual(memcache.get('foo'), b'2')
+        self.assertEqual(memcache.get('foo'), '2')
         self.assertEqual(memcache.decr('foo', 1), 1)
-        self.assertEqual(memcache.get('foo'), b'1')
+        self.assertEqual(memcache.get('foo'), '1')
 
         with self.assertRaises(memcached2.NotFound):
             memcache.decr('baz', 1)

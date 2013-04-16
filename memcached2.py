@@ -25,6 +25,8 @@ if not PY3:
 def _from_bytes(data):
     '''INTERNAL: Convert bytes to a regular string.'''
     if PY3:
+        if isinstance(data, str):
+            return data
         return str(data, 'ascii')
     return str(data)
 
@@ -32,6 +34,8 @@ def _from_bytes(data):
 def _to_bytes(data):
     '''Internal: Convert something to bytes type.'''
     if PY3:
+        if isinstance(data, bytes):
+            return data
         return bytes(data, 'ascii')
     return data
 
@@ -92,7 +96,7 @@ class NonNumeric(StoreException):
     '''The item you are trying to incr/decr is not numeric.'''
 
 
-class MemcacheValue(bytes):
+class MemcacheValue(str):
     '''Wrapper around Memcache value results, to augment the return data to
     include the additional information (flags, key, cas_unique)'''
 
@@ -200,11 +204,11 @@ class Memcache:
         else:
             server = self._send_command('get {0}\r\n'.format(key))
 
-        data = server.read_until(b'\r\n')
-        if data == b'END\r\n':
+        data = server.read_until('\r\n')
+        if data == 'END\r\n':
             raise NoValue()
 
-        if not data.startswith(b'VALUE'):
+        if not data.startswith('VALUE'):
             raise ValueError('Unknown response: {0}'.format(repr(data)))
         split_data = data.rstrip().split()[1:]
         key = split_data[0]
@@ -216,13 +220,13 @@ class Memcache:
             cas_unique = None
         body = server.read_length(length)
 
-        data = server.read_until(b'\r\n')   # trailing termination
-        if data != b'\r\n':
+        data = server.read_until('\r\n')   # trailing termination
+        if data != '\r\n':
             raise ValueError('Unexpected response when looking for '
                     'terminator: {0}'.format(data))
 
-        data = server.read_until(b'\r\n')
-        if data != b'END\r\n':
+        data = server.read_until('\r\n')
+        if data != 'END\r\n':
             raise ValueError('Unknown response: {0}'.format(repr(data)))
 
         return MemcacheValue(body, key, flags, cas_unique)
@@ -283,11 +287,11 @@ class Memcache:
         command = 'delete {0}\r\n'.format(key)
 
         server = self._send_command(command)
-        data = server.read_until(b'\r\n')
+        data = server.read_until('\r\n')
 
-        if data == b'DELETED\r\n':
+        if data == 'DELETED\r\n':
             return
-        if data == b'NOT_FOUND\r\n':
+        if data == 'NOT_FOUND\r\n':
             raise NotFound()
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
@@ -300,11 +304,11 @@ class Memcache:
         command = 'touch {0} {1}\r\n'.format(key, exptime)
 
         server = self._send_command(command)
-        data = server.read_until(b'\r\n')
+        data = server.read_until('\r\n')
 
-        if data == b'TOUCHED\r\n':
+        if data == 'TOUCHED\r\n':
             return
-        if data == b'NOT_FOUND\r\n':
+        if data == 'NOT_FOUND\r\n':
             raise NotFound()
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
@@ -316,9 +320,9 @@ class Memcache:
         command = 'flush_all\r\n'
 
         server = self._send_command(command)
-        data = server.read_until(b'\r\n')
+        data = server.read_until('\r\n')
 
-        if data == b'OK\r\n':
+        if data == 'OK\r\n':
             return
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
@@ -333,7 +337,7 @@ class Memcache:
         server = self._send_command(command)
         stats = {}
         while True:
-            data = _from_bytes(server.read_until(b'\r\n'))
+            data = _from_bytes(server.read_until('\r\n'))
             if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
@@ -371,7 +375,7 @@ class Memcache:
         server = self._send_command(command)
         stats = {}
         while True:
-            data = _from_bytes(server.read_until(b'\r\n'))
+            data = _from_bytes(server.read_until('\r\n'))
             if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
@@ -402,7 +406,7 @@ class Memcache:
         server = self._send_command(command)
         stats = {'slabs': {}}
         while True:
-            data = _from_bytes(server.read_until(b'\r\n'))
+            data = _from_bytes(server.read_until('\r\n'))
             if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
@@ -439,7 +443,7 @@ class Memcache:
         server = self._send_command(command)
         stats = {}
         while True:
-            data = _from_bytes(server.read_until(b'\r\n'))
+            data = _from_bytes(server.read_until('\r\n'))
             if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
@@ -471,7 +475,7 @@ class Memcache:
         server = self._send_command(command)
         stats = []
         while True:
-            data = _from_bytes(server.read_until(b'\r\n'))
+            data = _from_bytes(server.read_until('\r\n'))
             if data == 'END\r\n':
                 break
             prefix, key, value = data.strip().split()
@@ -500,15 +504,15 @@ class Memcache:
         '''INTERNAL: Increment/decrement command back-end.
         '''
         server = self._send_command(command)
-        data = server.read_until(b'\r\n')
+        data = server.read_until('\r\n')
 
         #  <NEW_VALUE>\r\n
-        if data[0] in b'0123456789':
+        if data[0] in '0123456789':
             return int(data.strip())
-        if data == b'NOT_FOUND\r\n':
+        if data == 'NOT_FOUND\r\n':
             raise NotFound()
-        client_error = (b'CLIENT_ERROR cannot increment or decrement '
-                b'non-numeric value\r\n')
+        client_error = ('CLIENT_ERROR cannot increment or decrement '
+                'non-numeric value\r\n')
         if data == client_error:
             raise NonNumeric()
 
@@ -520,15 +524,15 @@ class Memcache:
         '''
         server = self._send_command(command)
 
-        data = server.read_until(b'\r\n')
+        data = server.read_until('\r\n')
 
-        if data == b'STORED\r\n':
+        if data == 'STORED\r\n':
             return
-        if data == b'NOT_STORED\r\n':
+        if data == 'NOT_STORED\r\n':
             raise NotStored()
-        if data == b'EXISTS\r\n':
+        if data == 'EXISTS\r\n':
             raise CASFailure()
-        if data == b'NOT FOUND\r\n':
+        if data == 'NOT FOUND\r\n':
             raise NotFound()
 
         raise NotImplementedError('Unknown return data from server: "{0}"'
@@ -558,7 +562,7 @@ class ServerConnection:
         '''Reset the connection including flushing buffered data and closing
         the backend connection.'''
 
-        self.buffer = b''
+        self.buffer = ''
         if self.backend:
             self.backend.close()
         self.backend = None
@@ -608,7 +612,7 @@ class ServerConnection:
     def send_command(self, command):
         '''Write an ASCII command to the memcached server.'''
 
-        self.backend.send(command)
+        self.backend.send(_to_bytes(command))
 
     def read_until(self, search):
         '''Read data from the server until "search" is found.  Return data read
@@ -625,7 +629,7 @@ class ServerConnection:
                     start = max(0, len(self.buffer) - search_len)
 
             try:
-                data = self.backend.recv(self.buffer_readsize)
+                data = _from_bytes(self.backend.recv(self.buffer_readsize))
             except ConnectionResetError:
                 raise BackendDisconnect('During recv() in read_until()')
             if not data:
@@ -636,7 +640,7 @@ class ServerConnection:
         '''Read the specified number of bytes.  Return data read.'''
         while len(self.buffer) < length:
             try:
-                data = self.backend.recv(self.buffer_readsize)
+                data = _from_bytes(self.backend.recv(self.buffer_readsize))
             except ConnectionResetError:
                 raise BackendDisconnect('During recv() in read_length()')
             if not data:
