@@ -1,4 +1,5 @@
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
+Add a multi-server Selector.
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
 Decide on automatic pickling.
