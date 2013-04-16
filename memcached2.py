@@ -384,7 +384,7 @@ class Memcache:
                         .format(repr(data)))
             prefix, slab_key, stat_key = key.split(':')
             if prefix != 'items':
-                raise NotImplementedError('Unknown stats item key: {0}'
+                raise NotImplementedError('Unknown stats item: {0}'
                         .format(repr(key)))
             if not slab_key in stats:
                 stats[slab_key] = {}
