@@ -1,5 +1,6 @@
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
-Add a multi-server Selector.
+Need to make flush and stats commands send to all available servers?
+      Probably needs to have send_command able to have server specified.
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
 Decide on automatic pickling.

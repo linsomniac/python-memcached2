@@ -78,6 +78,11 @@ class StoreException(Memcached2Exception):
     '''Base class for storage related exceptions.'''
 
 
+class NoAvailableServers(Memcached2Exception):
+    '''There are no servers available to cache on, probably because all are
+    unavailable.'''
+
+
 class NotStored(StoreException):
     '''Item was not stored, but not due to an error.  Normally means the
     condition for an "add" or "replace" was not met'''
@@ -125,11 +130,35 @@ class HasherCMemcache:
 class SelectorFirst:
     '''Server selector that only returns the first server.  Useful when there
     is only one server to select amongst.'''
-    def select(self, server_list, hasher):
+    def select(self, server_list, key_hash):
         server = server_list[0]
         if not server.backend:
             server.connect()
         return server
+
+
+class SelectorAvailableServers:
+    '''Select among all "up" server connections, reconnecting to down servers
+    periodically.'''
+    def __init__(self, reconnect_frequency=100):
+        '''Selector that attempts to reconnect to down servers every
+        "reconnect_frequency" operations (default: 100).'''
+        self.reconnect_frequency = reconnect_frequency
+        self.operations_to_next_reconnect = 0
+
+    def select(self, server_list, key_hash):
+        if self.operations_to_next_reconnect < 1:
+            self.operations_to_next_reconnect = self.reconnect_frequency
+            for server in [x for x in server_list if not x.backend]:
+                server.connect()
+        else:
+            self.operations_to_next_reconnect -= 1
+
+        up_server_list = [x for x in server_list if x.backend]
+        if not up_server_list:
+            raise NoAvailableServers()
+
+        return up_server_list[key_hash % len(up_server_list)]
 
 
 class Memcache:
@@ -158,7 +187,8 @@ class Memcache:
         The "selector" is the algorithm that selects the backend server,
         making decisions based on which servers are available and attempting
         reconnecting.  If not specified, it defaults to SelectorFirst() if
-        there is only one server, or NotImplemented otherwise.
+        there is only one server, or SelectorAvailableServers() if multiple
+        servers are given.
 
         The "hasher" is a hash function which takes a key and returns a hash
         for persistent server selection.  If not specified, it defaults to
@@ -178,16 +208,16 @@ class Memcache:
                 if hasher == None:
                     self.hasher = HasherNone()
             else:
-                raise NotImplementedError('Only one server supported')
+                self.selector = SelectorAvailableServers()
                 if hasher == None:
                     self.hasher = HasherCMemcache()
 
     def __del__(self):
         self.close()
 
-    def _send_command(self, command):
+    def _send_command(self, command, key):
         command = _to_bytes(command)
-        server = self.selector.select(self.servers, self.hasher)
+        server = self.selector.select(self.servers, self.hasher.hash(key))
         server.send_command(command)
         return server
 
@@ -200,9 +230,9 @@ class Memcache:
         '''
 
         if get_cas:
-            server = self._send_command('gets {0}\r\n'.format(key))
+            server = self._send_command('gets {0}\r\n'.format(key), key)
         else:
-            server = self._send_command('get {0}\r\n'.format(key))
+            server = self._send_command('get {0}\r\n'.format(key), key)
 
         data = server.read_until('\r\n')
         if data == 'END\r\n':
@@ -245,7 +275,7 @@ class Memcache:
         else:
             command = 'set {0} {1} {2} {3}\r\n'.format(key,
                     flags, exptime, len(value)) + value + '\r\n'
-        return self._storage_command(command)
+        return self._storage_command(command, key)
 
     def add(self, key, value, flags=0, exptime=0):
         '''Store, but only if the server doesn't already hold data for it.
@@ -255,7 +285,7 @@ class Memcache:
         '''
         command = 'add {0} {1} {2} {3}\r\n'.format(key,
                 flags, exptime, len(value)) + value + '\r\n'
-        return self._storage_command(command)
+        return self._storage_command(command, key)
 
     def replace(self, key, value, flags=0, exptime=0):
         '''Store data, but only if the server already holds data for it.
@@ -265,28 +295,28 @@ class Memcache:
         '''
         command = 'replace {0} {1} {2} {3}\r\n'.format(key,
                 flags, exptime, len(value)) + value + '\r\n'
-        return self._storage_command(command)
+        return self._storage_command(command, key)
 
     def append(self, key, value):
         '''Store data after existing data associated with this key.
         '''
         command = 'append {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
-        return self._storage_command(command)
+        return self._storage_command(command, key)
 
     def prepend(self, key, value):
         '''Store data before existing data associated with this key.
         '''
         command = 'prepend {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
-        return self._storage_command(command)
+        return self._storage_command(command, key)
 
     def delete(self, key):
         '''Delete the key if it exists.
         '''
         command = 'delete {0}\r\n'.format(key)
 
-        server = self._send_command(command)
+        server = self._send_command(command, key)
         data = server.read_until('\r\n')
 
         if data == 'DELETED\r\n':
@@ -303,7 +333,7 @@ class Memcache:
         '''
         command = 'touch {0} {1}\r\n'.format(key, exptime)
 
-        server = self._send_command(command)
+        server = self._send_command(command, key)
         data = server.read_until('\r\n')
 
         if data == 'TOUCHED\r\n':
@@ -319,6 +349,7 @@ class Memcache:
         '''
         command = 'flush_all\r\n'
 
+        raise NotImplementedError('Needs to send to each server')
         server = self._send_command(command)
         data = server.read_until('\r\n')
 
@@ -334,6 +365,7 @@ class Memcache:
         '''
         command = 'stats\r\n'
 
+        raise NotImplementedError('Needs to send to each server')
         server = self._send_command(command)
         stats = {}
         while True:
@@ -372,6 +404,7 @@ class Memcache:
         '''
         command = 'stats items\r\n'
 
+        raise NotImplementedError('Needs to send to each server')
         server = self._send_command(command)
         stats = {}
         while True:
@@ -403,6 +436,7 @@ class Memcache:
         '''
         command = 'stats slabs\r\n'
 
+        raise NotImplementedError('Needs to send to each server')
         server = self._send_command(command)
         stats = {'slabs': {}}
         while True:
@@ -440,6 +474,7 @@ class Memcache:
         '''
         command = 'stats settings\r\n'
 
+        raise NotImplementedError('Needs to send to each server')
         server = self._send_command(command)
         stats = {}
         while True:
@@ -472,6 +507,7 @@ class Memcache:
         '''
         command = 'stats sizes\r\n'
 
+        raise NotImplementedError('Needs to send to each server')
         server = self._send_command(command)
         stats = []
         while True:
@@ -491,19 +527,19 @@ class Memcache:
         Return the new value.
         '''
         command = 'incr {0} {1}\r\n'.format(key, value)
-        return self._incrdecr_command(command)
+        return self._incrdecr_command(command, key)
 
     def decr(self, key, value):
         '''Decrement the value for the key, treated as a 64-bit unsigned value.
         Return the new value.
         '''
         command = 'decr {0} {1}\r\n'.format(key, value)
-        return self._incrdecr_command(command)
+        return self._incrdecr_command(command, key)
 
-    def _incrdecr_command(self, command):
+    def _incrdecr_command(self, command, key):
         '''INTERNAL: Increment/decrement command back-end.
         '''
-        server = self._send_command(command)
+        server = self._send_command(command, key)
         data = server.read_until('\r\n')
 
         #  <NEW_VALUE>\r\n
@@ -519,10 +555,10 @@ class Memcache:
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(repr(data)))
 
-    def _storage_command(self, command):
+    def _storage_command(self, command, key):
         '''INTERNAL: Storage command back-end.
         '''
-        server = self._send_command(command)
+        server = self._send_command(command, key)
 
         data = server.read_until('\r\n')
 

@@ -181,4 +181,12 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(memcache.stats_sizes(), [(64, 1)])
         memcache.stats_slabs()
 
+    def test_SeveralServers(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',
+                'memcached://localhost/', 'memcached://localhost/',
+                'memcached://localhost/',))
+
+        for i in range(100):
+            memcache.set('foo{0}'.format(i), 'bar')
+
 unittest.main()
