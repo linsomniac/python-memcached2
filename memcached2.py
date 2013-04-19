@@ -5,7 +5,7 @@ A re-implementation of the python-memcached module, designed to work with
 Python 2 and 3.  Note: It is tested against Python 2.7 and 3.3 during
 development, there may be problems running against previous versions.
 
-See the Memcache() class for an example of use.
+See the Memcache() class and the tests for examples of use.
 
 Developed by Sean Reifschneider <jafo@tummy.com> in 2013.
 
