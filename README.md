@@ -55,6 +55,13 @@ a buffered input wrapper and using recv() to read large blocks of data,
 then search for the newline or other data.  Should be a big performance
 boost, especially on large data stores.
 
+License
+-------
+
+python-memcached2 is licensed under version 2.0 of the Apache License.
+See the file "LICENSE" in the top level directory or the Copyright notice
+in the software.
+
 Background
 ----------
 
