@@ -5,10 +5,11 @@ A new 100% Python memcache client library.  This is targeted at Python 3.3+
 and Python 2.7, though it may be possible for it to work with Python 2.6 as
 well.
 
-2013-04-15: I'm considering the Memcache() class to mostly be done.  I do
-need to add a multi-backend Selector.  However, this class is kind of the
-lowest level, primarily in that it raises exceptions which requires all
-accesses to catch exceptions.
+2013-04-19: I'm considering the Memcache() class to be done.  This class
+is the "lowest level" interface, and raises exceptions for unexpected
+cases.  I expect to now start working on a higher level interface, possibly
+that interface will swallow exceptions and instead just act like the
+operation was a cache miss, or silently ignore storage errors.
 
 2013-04-01: I've just started working on this, and it's a side project for a
 side project, so I have no timeline.  Use the regular python-memcached.
