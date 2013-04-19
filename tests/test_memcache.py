@@ -186,6 +186,16 @@ class test_ServerConnection(unittest.TestCase):
                 'memcached://localhost/', 'memcached://localhost/',
                 'memcached://localhost/',))
 
+        memcache.flush_all()
+
+        import pprint
+        pprint.pprint(memcache.stats())
+
+        self.assertEqual(len(memcache.stats()), 4)
+        memcache.stats_settings()
+        memcache.stats_items()
+        memcache.stats_sizes()
+        memcache.stats_sizes()
         for i in range(100):
             memcache.set('foo{0}'.format(i), 'bar')
 

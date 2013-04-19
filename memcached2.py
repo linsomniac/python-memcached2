@@ -216,6 +216,8 @@ class Memcache:
         self.close()
 
     def _send_command(self, command, key):
+        '''Send a command to a server.  "key" is used to determine the server
+        to send the command to.'''
         command = _to_bytes(command)
         server = self.selector.select(self.servers, self.hasher.hash(key))
         server.send_command(command)
@@ -344,58 +346,74 @@ class Memcache:
         raise NotImplementedError('Unknown return data from server: "{0}"'
                 .format(repr(data)))
 
+    def _reconnect_all(self):
+        '''INTERNAL: Attempt to connect to all backend servers.'''
+        for server in [x for x in self.servers if not x.backend]:
+            server.connect()
+
     def flush_all(self):
-        '''Flush the memcache server.
+        '''Flush the memcache server.  An attempt is made to connect to all
+        backend servers before running this command.
         '''
         command = 'flush_all\r\n'
 
-        raise NotImplementedError('Needs to send to each server')
-        server = self._send_command(command)
-        data = server.read_until('\r\n')
+        self._reconnect_all()
+        for server in [x for x in self.servers if x.backend]:
+            server.send_command(command)
+            data = server.read_until('\r\n')
 
-        if data == 'OK\r\n':
-            return
-
-        raise NotImplementedError('Unknown return data from server: "{0}"'
-                .format(repr(data)))
+            if data != 'OK\r\n':
+                raise NotImplementedError(
+                        'Unknown return data from server: "{0}"'
+                        .format(repr(data)))
 
     def stats(self):
-        '''Get statistics from the memcache server, returns a dictionary of
-        key/value pairs received from the server.
+        '''Get statistics from the memcache server, returns a list of
+        dictionaries, each list element corresponds to one of the servers
+        (ordered as when created), each element is None if there is no
+        connection to the server, or a dictionary of key/value pairs
+        received from the server.  An attempt is made to connect to all
+        servers before issuing this command.
         '''
         command = 'stats\r\n'
 
-        raise NotImplementedError('Needs to send to each server')
-        server = self._send_command(command)
-        stats = {}
-        while True:
-            data = _from_bytes(server.read_until('\r\n'))
-            if data == 'END\r\n':
-                break
-            prefix, key, value = data.strip().split()
-            if prefix != 'STAT':
-                raise NotImplementedError('Unknown stats data: {0}'
-                        .format(repr(data)))
-            if key in ['pid', 'uptime', 'time', 'pointer_size',
-                    'curr_items', 'total_items', 'bytes',
-                    'curr_connections', 'total_connections',
-                    'connection_structures', 'reserved_fds', 'cmd_get',
-                    'cmd_set', 'cmd_flush', 'cmd_hits', 'cmd_misses',
-                    'delete_misses', 'delete_hits', 'incr_misses',
-                    'incr_hits', 'decr_misses', 'decr_hits', 'cas_misses',
-                    'cas_hits', 'cas_badval', 'touch_hits',
-                    'touch_misses', 'auth_cmds', 'auth_errors',
-                    'evictions', 'reclaimed', 'bytes_read',
-                    'bytes_written', 'limit_maxbytes', 'threads',
-                    'conn_yields', 'hash_power_level', 'hash_bytes',
-                    'expired_unfetched', 'evicted_unfetched',
-                    'slabs_moved']:
-                value = int(value)
-            if key in ['rusage_user', 'rusage_system']:
-                value = float(value)
-            stats[key] = value
+        results = []
+        self._reconnect_all()
+        for server in self.servers:
+            stats = None
+            if server.backend:
+                server.send_command(command)
+                stats = {}
+                while True:
+                    data = _from_bytes(server.read_until('\r\n'))
+                    if data == 'END\r\n':
+                        break
+                    prefix, key, value = data.strip().split()
+                    if prefix != 'STAT':
+                        raise NotImplementedError('Unknown stats data: {0}'
+                                .format(repr(data)))
+                    if key in ['pid', 'uptime', 'time', 'pointer_size',
+                            'curr_items', 'total_items', 'bytes',
+                            'curr_connections', 'total_connections',
+                            'connection_structures', 'reserved_fds', 'cmd_get',
+                            'cmd_set', 'cmd_flush', 'cmd_hits', 'cmd_misses',
+                            'delete_misses', 'delete_hits', 'incr_misses',
+                            'incr_hits', 'decr_misses', 'decr_hits', 'cas_misses',
+                            'cas_hits', 'cas_badval', 'touch_hits',
+                            'touch_misses', 'auth_cmds', 'auth_errors',
+                            'evictions', 'reclaimed', 'bytes_read',
+                            'bytes_written', 'limit_maxbytes', 'threads',
+                            'conn_yields', 'hash_power_level', 'hash_bytes',
+                            'expired_unfetched', 'evicted_unfetched',
+                            'slabs_moved']:
+                        value = int(value)
+                    if key in ['rusage_user', 'rusage_system']:
+                        value = float(value)
+                    stats[key] = value
 
-        return stats
+            results.append(stats)
+
+        return results
 
     def stats_items(self):
         '''Gets statistics about items storage per slab class.  Returns a
