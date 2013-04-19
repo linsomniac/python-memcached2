@@ -174,11 +174,12 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_Stats(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.flush_all()
         memcache.set('foo', 'a')
         memcache.stats()
         memcache.stats_settings()
         memcache.stats_items()
-        self.assertEqual(memcache.stats_sizes(), [(64, 1)])
+        self.assertEqual(memcache.stats_sizes()[0][0], (64, 1))
         memcache.stats_slabs()
 
     def test_SeveralServers(self):
@@ -188,14 +189,26 @@ class test_ServerConnection(unittest.TestCase):
 
         memcache.flush_all()
 
-        import pprint
-        pprint.pprint(memcache.stats())
+        data = memcache.stats()
+        self.assertEqual(len(data), 4)
+        self.assertNotIn(None, data)
 
-        self.assertEqual(len(memcache.stats()), 4)
-        memcache.stats_settings()
-        memcache.stats_items()
-        memcache.stats_sizes()
-        memcache.stats_sizes()
+        data = memcache.stats_settings()
+        self.assertEqual(len(data), 4)
+        self.assertNotIn(None, data)
+
+        data = memcache.stats_items()
+        self.assertEqual(len(data), 4)
+        self.assertNotIn(None, data)
+
+        data = memcache.stats_sizes()
+        self.assertEqual(len(data), 4)
+        self.assertNotIn(None, data)
+
+        data = memcache.stats_sizes()
+        self.assertEqual(len(data), 4)
+        self.assertNotIn(None, data)
+
         for i in range(100):
             memcache.set('foo{0}'.format(i), 'bar')
 

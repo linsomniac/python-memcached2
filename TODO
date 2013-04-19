@@ -1,6 +1,6 @@
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
-Need to make flush and stats commands send to all available servers?
-      Probably needs to have send_command able to have server specified.
+      How will that work, considering they could hash to multiple servers?
+      Collect the ones that go to the same server and send them as groups?
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
 Decide on automatic pickling.
