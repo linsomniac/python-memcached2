@@ -4,3 +4,6 @@ Make "get" accept multiple keys (see "get <key>*" in protocol docs).
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
 Decide on automatic pickling.
+Do we want to use flags for pickling/compression indication, or allow
+      users to use it?  Or have a slightly higher level sits on top of
+      Memcache() and can do pickling and compression?
