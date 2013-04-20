@@ -76,7 +76,7 @@ class test_ServerConnection(unittest.TestCase):
                 .format(server.port))
         sc.connect()
         sc.send_command('flush_all\r\n')
-        with self.assertRaises(memcached2.BackendDisconnect):
+        with self.assertRaises(memcached2.ServerDisconnect):
             self.assertEqual(sc.read_until('\r\n'), 'OK\r\n')
         sc.reset()
 
@@ -89,7 +89,7 @@ class test_ServerConnection(unittest.TestCase):
                 .format(server.port))
         sc.connect()
         sc.send_command('flush_all\r\n')
-        with self.assertRaises(memcached2.BackendDisconnect):
+        with self.assertRaises(memcached2.ServerDisconnect):
             self.assertEqual(sc.read_until('\r\n'), 'OK\r\n')
         sc.reset()
 

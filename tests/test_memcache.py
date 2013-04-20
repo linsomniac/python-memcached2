@@ -51,27 +51,27 @@ class test_ServerConnection(unittest.TestCase):
         server = CommandServer([])
         memcache = memcached2.Memcache(('memcached://localhost:{0}/'
                 .format(server.port),))
-        with self.assertRaises(memcached2.BackendDisconnect):
+        with self.assertRaises(memcached2.ServerDisconnect):
             memcache.set('foo', 'bar')
 
         server = CommandServer([RECEIVE])
         memcache = memcached2.Memcache(('memcached://localhost:{0}/'
                 .format(server.port),))
-        with self.assertRaises(memcached2.BackendDisconnect):
+        with self.assertRaises(memcached2.ServerDisconnect):
             memcache.set('foo', 'bar')
 
         server = CommandServer([RECEIVE, 'STORED\r\n'])
         memcache = memcached2.Memcache(('memcached://localhost:{0}/'
                 .format(server.port),))
         memcache.set('foo', 'bar')
-        with self.assertRaises(memcached2.BackendDisconnect):
+        with self.assertRaises(memcached2.ServerDisconnect):
             memcache.get('foo')
 
         server = CommandServer([RECEIVE, 'STORED\r\n', RECEIVE])
         memcache = memcached2.Memcache(('memcached://localhost:{0}/'
                 .format(server.port),))
         memcache.set('foo', 'bar')
-        with self.assertRaises(memcached2.BackendDisconnect):
+        with self.assertRaises(memcached2.ServerDisconnect):
             memcache.get('foo')
 
         server = CommandServer([RECEIVE, 'STORED\r\n', RECEIVE,

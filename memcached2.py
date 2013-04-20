@@ -65,7 +65,8 @@ def _to_bool(s):
 
 
 class MemcachedException(Exception):
-    '''Base exception that all other exceptions inherit from'''
+    '''Base exception that all other exceptions inherit from.
+    This is never raised directly.'''
 
 
 class UnknownProtocol(MemcachedException):
@@ -73,11 +74,11 @@ class UnknownProtocol(MemcachedException):
 
 
 class InvalidURI(MemcachedException):
-    '''An error was encountered in parsing the URI'''
+    '''An error was encountered in parsing the server URI'''
 
 
-class BackendDisconnect(MemcachedException):
-    '''The backend connection closed'''
+class ServerDisconnect(MemcachedException):
+    '''The connection to the server closed'''
 
 
 class NoAvailableServers(MemcachedException):
@@ -86,21 +87,21 @@ class NoAvailableServers(MemcachedException):
 
 
 class StoreException(MemcachedException):
-    '''Base class for storage related exceptions.'''
+    '''Base class for storage related exceptions.  Never raised directly.'''
 
 
 class NotStored(StoreException):
     '''Item was not stored, but not due to an error.  Normally means the
-    condition for an "add" or "replace" was not met'''
+    condition for an "add" or "replace" was not met.'''
 
 
 class CASFailure(StoreException):
     '''Item you are trying to store with a "cas" command has been modified
-    since you last fetched it (result=EXISTS)'''
+    since you last fetched it (result=EXISTS).'''
 
 
 class NotFound(StoreException):
-    '''Item you are trying to store with a "cas" command does not exist'''
+    '''Item you are trying to store with a "cas" command does not exist.'''
 
 
 class NonNumeric(StoreException):
@@ -108,7 +109,8 @@ class NonNumeric(StoreException):
 
 
 class RetrieveException(MemcachedException):
-    '''Base class for retrieve related exceptions.'''
+    '''Base class for retrieve related exceptions.  This is never raised
+    directly.'''
 
 
 class NoValue(RetrieveException):
@@ -758,9 +760,9 @@ class ServerConnection:
             try:
                 data = _from_bytes(self.backend.recv(self.buffer_readsize))
             except ConnectionResetError:
-                raise BackendDisconnect('During recv() in read_until()')
+                raise ServerDisconnect('During recv() in read_until()')
             if not data:
-                raise BackendDisconnect('Zero-length read in read_until()')
+                raise ServerDisconnect('Zero-length read in read_until()')
             self.buffer += data
 
     def read_length(self, length):
@@ -769,9 +771,9 @@ class ServerConnection:
             try:
                 data = _from_bytes(self.backend.recv(self.buffer_readsize))
             except ConnectionResetError:
-                raise BackendDisconnect('During recv() in read_length()')
+                raise ServerDisconnect('During recv() in read_length()')
             if not data:
-                raise BackendDisconnect('Zero-length read in read_length()')
+                raise ServerDisconnect('Zero-length read in read_length()')
             self.buffer += data
 
         return self.consume_from_buffer(length)
