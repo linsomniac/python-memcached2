@@ -255,7 +255,8 @@ class Memcache:
             raise NoValue()
 
         if not data.startswith('VALUE'):
-            raise ValueError('Unknown response: {0}'.format(repr(data)))
+            raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data)))
         split_data = data.rstrip().split()[1:]
         key = split_data[0]
         flags = int(split_data[1])
@@ -268,12 +269,13 @@ class Memcache:
 
         data = server.read_until('\r\n')   # trailing termination
         if data != '\r\n':
-            raise ValueError('Unexpected response when looking for '
+            raise NotImplementedError('Unexpected response when looking for '
                     'terminator: {0}'.format(data))
 
         data = server.read_until('\r\n')
         if data != 'END\r\n':
-            raise ValueError('Unknown response: {0}'.format(repr(data)))
+            raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data)))
 
         return MemcacheValue(body, key, flags, cas_unique)
 
