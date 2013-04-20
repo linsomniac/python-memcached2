@@ -78,4 +78,4 @@ Base class for retrieve related exceptions.  This is never raised directly.
 
 NoValue(RetrieveException)
 
-No value retrieved.
+Server has no data associated with this key.

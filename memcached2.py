@@ -114,7 +114,7 @@ class RetrieveException(MemcachedException):
 
 
 class NoValue(RetrieveException):
-    '''No value retrieved.'''
+    '''Server has no data associated with this key.'''
 
 
 class MemcacheValue(str):

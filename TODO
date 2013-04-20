@@ -1,4 +1,3 @@
-Improve description of NoValue() exception.
 Documentation.
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
       How will that work, considering they could hash to multiple servers?
