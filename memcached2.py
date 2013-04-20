@@ -64,37 +64,29 @@ def _to_bool(s):
             .format(repr(s)))
 
 
-class Memcached2Exception(Exception):
+class MemcachedException(Exception):
     '''Base exception that all other exceptions inherit from'''
 
 
-class UnknownProtocol(Memcached2Exception):
+class UnknownProtocol(MemcachedException):
     '''An unknown protocol was specified in the memcached URI'''
 
 
-class InvalidURI(Memcached2Exception):
+class InvalidURI(MemcachedException):
     '''An error was encountered in parsing the URI'''
 
 
-class BackendDisconnect(Memcached2Exception):
+class BackendDisconnect(MemcachedException):
     '''The backend connection closed'''
 
 
-class RetrieveException(Memcached2Exception):
-    '''Base class for retrieve related exceptions.'''
-
-
-class NoValue(RetrieveException):
-    '''No value retrieved.'''
-
-
-class StoreException(Memcached2Exception):
-    '''Base class for storage related exceptions.'''
-
-
-class NoAvailableServers(Memcached2Exception):
+class NoAvailableServers(MemcachedException):
     '''There are no servers available to cache on, probably because all are
     unavailable.'''
+
+
+class StoreException(MemcachedException):
+    '''Base class for storage related exceptions.'''
 
 
 class NotStored(StoreException):
@@ -113,6 +105,14 @@ class NotFound(StoreException):
 
 class NonNumeric(StoreException):
     '''The item you are trying to incr/decr is not numeric.'''
+
+
+class RetrieveException(MemcachedException):
+    '''Base class for retrieve related exceptions.'''
+
+
+class NoValue(RetrieveException):
+    '''No value retrieved.'''
 
 
 class MemcacheValue(str):
