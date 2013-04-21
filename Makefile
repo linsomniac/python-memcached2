@@ -23,4 +23,4 @@ commit: check
 	git push
 
 clean:
-	rm -rf __pycache__ tests/__pycache__ *.pyc tests/*.pyc
+	rm -rf __pycache__ tests/__pycache__ *.pyc tests/*.pyc docs/_build
