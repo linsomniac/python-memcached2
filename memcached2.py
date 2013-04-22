@@ -461,8 +461,10 @@ class Memcache:
             server.connect()
 
     def flush_all(self):
-        '''Flush the memcache servers.  An attempt is made to connect to all
-        backend servers before running this command.
+        '''Flush the memcache servers.
+
+        **NOTE:** An attempt is made to connect to all backend servers
+        before running this command.
 
         :raises: :py:exc:`NotImplementedError`
         '''
@@ -500,7 +502,7 @@ class Memcache:
         each server.  If the server is not connected, None is returned
         for its position, otherwise data as mentioned above.
 
-        An attempt is made to connect to all servers before issuing
+        **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
         '''
         def query(server):
@@ -550,7 +552,7 @@ class Memcache:
         each server.  If the server is not connected, None is returned
         for its position, otherwise data as mentioned above.
 
-        An attempt is made to connect to all servers before issuing
+        **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
         '''
         def query(server):
@@ -595,7 +597,7 @@ class Memcache:
         each server.  If the server is not connected, None is returned
         for its position, otherwise data as mentioned above.
 
-        An attempt is made to connect to all servers before issuing
+        **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
         '''
         def query(server):
@@ -642,7 +644,7 @@ class Memcache:
         each server.  If the server is not connected, None is returned
         for its position, otherwise data as mentioned above.
 
-        An attempt is made to connect to all servers before issuing
+        **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
         '''
         def query(server):
@@ -687,7 +689,7 @@ class Memcache:
         each server.  If the server is not connected, None is returned
         for its position, otherwise data as mentioned above.
 
-        An attempt is made to connect to all servers before issuing
+        **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
         '''
         def query(server):
