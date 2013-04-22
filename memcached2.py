@@ -70,51 +70,60 @@ class MemcachedException(Exception):
 
 
 class UnknownProtocol(MemcachedException):
-    '''An unknown protocol was specified in the memcached URI'''
+    '''An unknown protocol was specified in the memcached URI.
+    Sublcass of :class:`MemcachedException`.'''
 
 
 class InvalidURI(MemcachedException):
-    '''An error was encountered in parsing the server URI'''
+    '''An error was encountered in parsing the server URI.
+    Subclass of :class:`MemcachedException`.'''
 
 
 class ServerDisconnect(MemcachedException):
-    '''The connection to the server closed'''
+    '''The connection to the server closed.
+    Subclass of :class:`MemcachedException`.'''
 
 
 class NoAvailableServers(MemcachedException):
-    '''There are no servers available to cache on, probably because all are
-    unavailable.'''
+    '''There are no servers available to cache on, probably because all
+    are unavailable..  Subclass of :class:`MemcachedException`.'''
 
 
 class StoreException(MemcachedException):
-    '''Base class for storage related exceptions.  Never raised directly.'''
+    '''Base class for storage related exceptions.  Never raised directly..
+    Subclass of :class:`MemcachedException`.'''
 
 
 class NotStored(StoreException):
     '''Item was not stored, but not due to an error.  Normally means the
-    condition for an "add" or "replace" was not met.'''
+    condition for an "add" or "replace" was not met..  Subclass of
+    :class:`StoreException`.'''
 
 
 class CASFailure(StoreException):
     '''Item you are trying to store with a "cas" command has been modified
-    since you last fetched it (result=EXISTS).'''
+    since you last fetched it (result=EXISTS)..  Subclass of
+    :class:`StoreException`.'''
 
 
 class NotFound(StoreException):
-    '''Item you are trying to store with a "cas" command does not exist.'''
+    '''Item you are trying to store with a "cas" command does not exist..
+    Subclass of :class:`StoreException`.'''
 
 
 class NonNumeric(StoreException):
-    '''The item you are trying to incr/decr is not numeric.'''
+    '''The item you are trying to incr/decr is not numeric..
+    Subclass of :class:`StoreException`.'''
 
 
 class RetrieveException(MemcachedException):
     '''Base class for retrieve related exceptions.  This is never raised
-    directly.'''
+    directly..  Subclass of :class:`MemcachedException`.'''
 
 
 class NoValue(RetrieveException):
-    '''Server has no data associated with this key.'''
+    '''Server has no data associated with this key..
+    Subclass of :class:`RetrieveException`.'''
 
 
 class MemcacheValue(str):
