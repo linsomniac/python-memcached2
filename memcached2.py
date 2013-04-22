@@ -271,10 +271,10 @@ class Memcache:
 
         :param key: The key to lookup in the memcache server.
         :type key: str
-        :param get_cas:
-        :type get_cas: bool (default=False) If True, the "cas unique"
+        :param get_cas: (default=False) If True, the "cas unique"
             is queried and the return object has the "cas_unique"
             attribute set.
+        :type get_cas: bool
         :returns: :class:`MemcacheValue` -- The value read from the server,
             which includes attributes specifying the key and flags, otherwise
             it acts like a string.
