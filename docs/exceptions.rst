@@ -1,8 +1,8 @@
 python-memcached2 Exceptions
-============================
+****************************
 
 Overview
---------
+========
 
 The classes that throw exceptions all tend to raise exceptions that are
 children of the MemcachedException.  For storage-related exceptions, they
@@ -22,7 +22,7 @@ python-memcached2 module or the developers of the memcached server you are
 using.  You probably don't want to catch these
 
 Exceptions
-----------
+==========
 
 .. module:: memcached2
 

@@ -240,3 +240,6 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+#  To get the __init__ docstring included in the class documentation:
+autoclass_content = 'both'

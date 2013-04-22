@@ -15,6 +15,12 @@
 # limitations under the License.
 
 '''
+.. module:: memcached2
+    :platform: Unix, Windows
+    :synopsis: Next-generation memcache module for Python 2 and 3.
+
+    .. moduleauthor:: Sean Reifschneider <jafo@tummy.com>
+
 A re-implementation of the python-memcached module, designed to work with
 Python 2 and 3.  Note: It is tested against Python 2.7 and 3.3 during
 development, there may be problems running against previous versions.
@@ -187,12 +193,14 @@ class SelectorAvailableServers:
 
 
 class Memcache:
-    '''Basic memcache interface.  This interface will raise exceptions when
-    backend connections occur, allowing a program full control over handling
-    of connection problems.
+    '''
+    Create a new Memcache connection, to the specified servers.
+    The list of servers, specified by URL, are consulted based on the
+    hash of the key, effectively "sharding" the key space.
 
-    An "error swallowing" wrapper will provide functionality similar to the
-    previous python-memcached module.
+    This is a low-level memcache interface.  This interface will raise
+    exceptions when backend connections occur, allowing a program full
+    control over handling of connection problems.
 
     Example:
 
@@ -205,20 +213,21 @@ class Memcache:
     '''
 
     def __init__(self, servers, selector=None, hasher=None):
-        '''Create a new Memcache connection, to the specified servers.
-        The list of servers, specified by URL, are consulted based on the
-        hash of the key, effectively "sharding" the key space.
-
-        The "selector" is the algorithm that selects the backend server,
-        making decisions based on which servers are available and attempting
-        reconnecting.  If not specified, it defaults to SelectorFirst() if
-        there is only one server, or SelectorAvailableServers() if multiple
-        servers are given.
-
-        The "hasher" is a hash function which takes a key and returns a hash
-        for persistent server selection.  If not specified, it defaults to
-        HasherNone() if there is only one server specified, or
-        HasherCMemcache() otherwise.
+        '''
+        :param servers: One or more server URIs of the form: 
+            "memcache://hostname[:port]/"
+        :type servers: list
+        :param selector: (None) A "Selector" class object.  This code implements
+            the server selector logic.  If not specified, the default is used.
+            The default is to use :class:`SelectorFirst` if only one server
+            is specified, and :class:`SelectorAvailableServers` if multiple
+            servers are given.
+        :type selector: "Selector" class object.
+        :param hasher: (None) A "Hash" object which takes a key and returns
+            a hash for persistent server selection.  If not specified, it
+            defaults to :class:`HasherNone` if there is only one server
+            specified, or :class:`HasherCMemcache` otherwise.
+        :type hasher: "Hash" class object.
         '''
 
         self.servers = [ServerConnection(x) for x in servers]
@@ -241,19 +250,35 @@ class Memcache:
         self.close()
 
     def _send_command(self, command, key):
-        '''Send a command to a server.  "key" is used to determine the server
-        to send the command to.'''
+        '''INTERNAL: Send a command to a server.
+
+        :param command: The memcache-protocol command to send to the
+            server, a string terminated with "\r\n".
+        :type command: str
+        :param key: The key within the command, used to determine what
+            server to send the command to.
+        :type key: str
+        :returns: :class:`ServerConnection` -- The server object that the
+            command was sent to.
+        '''
         command = _to_bytes(command)
         server = self.selector.select(self.servers, self.hasher.hash(key))
         server.send_command(command)
         return server
 
     def get(self, key, get_cas=False):
-        '''Retrieve the specified key from a memcache server.  Returns
-        the value read from the server, as a "MemcacheValue" object
-        which includes attributes specifying the key and flags, otherwise
-        it acts like a string.  If "get_cas" is true, the "cas_unique"
-        value is queried and stored in the return data.
+        '''Retrieve the specified key from a memcache server.
+
+        :param key: The key to lookup in the memcache server.
+        :type key: str
+        :param get_cas:
+        :type get_cas: bool (default=False) If True, the "cas unique"
+            is queried and the return object has the "cas_unique"
+            attribute set.
+        :returns: :class:`MemcacheValue` -- The value read from the server,
+            which includes attributes specifying the key and flags, otherwise
+            it acts like a string.
+        :raises: NoValue, NotImplementedError
         '''
 
         if get_cas:
