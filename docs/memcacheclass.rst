@@ -1,12 +1,6 @@
 Low-Level Memcache() Interface
 ******************************
 
-Overview
-========
-
-Members
-=======
-
 .. autoclass:: memcached2.Memcache
    :members: get, set, add, replace, append, prepend, delete, touch,
       incr, decr, flush_all, close,
