@@ -25,57 +25,65 @@ Exceptions
 ----------
 
 MemcachedException(Exception)
++++++++++++++++++++++++++++++
 
 Base exception that all other exceptions inherit from.  This is never
 raised directly.
 
 UnknownProtocol(MemcachedException)
++++++++++++++++++++++++++++++++++++
 
 An unknown protocol was specified in the memcached URI.
 
 InvalidURI(MemcachedException)
+++++++++++++++++++++++++++++++
 
 An error was encountered in parsing the server URI.
 
 ServerDisconnect(MemcachedException)
+++++++++++++++++++++++++++++++++++++
 
 The connection to the server closed.
 
 NoAvailableServers(MemcachedException)
+++++++++++++++++++++++++++++++++++++++
 
 There are no servers available to cache on, probably because all are
 unavailable.
 
 StoreException(MemcachedException)
+++++++++++++++++++++++++++++++++++
 
 Base class for storage related exceptions.  Never raised directly.
 
 NotStored(StoreException)
++++++++++++++++++++++++++
 
 Item was not stored, but not due to an error.  Normally means the
 condition for an "add" or "replace" was not met.
 
 CASFailure(StoreException)
+++++++++++++++++++++++++++
 
 Item you are trying to store with a "cas" command has been modified
 since you last fetched it (result=EXISTS).
 
-
 NotFound(StoreException)
+++++++++++++++++++++++++
 
 Item you are trying to store with a "cas" command does not exist.
 
-
 NonNumeric(StoreException)
+++++++++++++++++++++++++++
 
 The item you are trying to incr/decr is not numeric.
 
-
 RetrieveException(MemcachedException)
++++++++++++++++++++++++++++++++++++++
 
 Base class for retrieve related exceptions.  This is never raised directly.
 
-
 NoValue(RetrieveException)
+++++++++++++++++++++++++++
 
 Server has no data associated with this key.
