@@ -620,7 +620,7 @@ class Memcache:
         Each statistic is a dictionary of of size:count where the size is
         rounded up to 32-byte ranges.
 
-        WARNING: This operation locks the cache while it iterates
+        **WARNING**: This operation locks the cache while it iterates
         over all objects.  Returns a list of (size,count) tuples received
         from the server.
 
