@@ -218,12 +218,12 @@ class Memcache:
         :param servers: One or more server URIs of the form:
             "memcache://hostname[:port]/"
         :type servers: list
-        :param selector: (None) A "Selector" class object.  This code implements
-            the server selector logic.  If not specified, the default is used.
-            The default is to use :py:class:`~memcached2.SelectorFirst` if
-            only one server is specified, and
-            :py:class:`~memcached2.SelectorAvailableServers` if multiple
-            servers are given.
+        :param selector: (None) A "Selector" class object.  This code
+            implements the server selector logic.  If not specified, the
+            default is used.  The default is to use
+            :py:class:`~memcached2.SelectorFirst` if only one server is
+            specified, and :py:class:`~memcached2.SelectorAvailableServers`
+            if multiple servers are given.
         :type selector: "Selector" class object.
         :param hasher: (None) A "Hash" object which takes a key and returns
             a hash for persistent server selection.  If not specified, it
@@ -347,13 +347,22 @@ class Memcache:
 
     def add(self, key, value, flags=0, exptime=0):
         '''Store, but only if the server doesn't already hold data for it.
-        If the "flags" are specified, those same flags will be provided
-        on return.  If "exptime" is set to non-zero, it specifies the
-        expriation time, in seconds, that this key's data expires.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: Value stored in memcache server for this key.
+        :type value: str
+        :param flags: If specified, the same value will be provided on
+                :func:`get`.
+        :type flags: int (32 bits)
+        :param exptime: If non-zero, it specifies the expriation time, in
+            seconds, for this value.
+        :type exptime: int
         '''
         command = 'add {0} {1} {2} {3}\r\n'.format(key,
                 flags, exptime, len(value)) + value + '\r\n'
-        return self._storage_command(command, key)
+        self._storage_command(command, key)
 
     def replace(self, key, value, flags=0, exptime=0):
         '''Store data, but only if the server already holds data for it.
@@ -363,21 +372,21 @@ class Memcache:
         '''
         command = 'replace {0} {1} {2} {3}\r\n'.format(key,
                 flags, exptime, len(value)) + value + '\r\n'
-        return self._storage_command(command, key)
+        self._storage_command(command, key)
 
     def append(self, key, value):
         '''Store data after existing data associated with this key.
         '''
         command = 'append {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
-        return self._storage_command(command, key)
+        self._storage_command(command, key)
 
     def prepend(self, key, value):
         '''Store data before existing data associated with this key.
         '''
         command = 'prepend {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
-        return self._storage_command(command, key)
+        self._storage_command(command, key)
 
     def delete(self, key):
         '''Delete the key if it exists.
