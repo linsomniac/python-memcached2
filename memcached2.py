@@ -366,9 +366,18 @@ class Memcache:
 
     def replace(self, key, value, flags=0, exptime=0):
         '''Store data, but only if the server already holds data for it.
-        If the "flags" are specified, those same flags will be provided
-        on return.  If "exptime" is set to non-zero, it specifies the
-        expriation time, in seconds, that this key's data expires.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: Value stored in memcache server for this key.
+        :type value: str
+        :param flags: If specified, the same value will be provided on
+                :func:`get`.
+        :type flags: int (32 bits)
+        :param exptime: If non-zero, it specifies the expriation time, in
+            seconds, for this value.
+        :type exptime: int
         '''
         command = 'replace {0} {1} {2} {3}\r\n'.format(key,
                 flags, exptime, len(value)) + value + '\r\n'
@@ -376,6 +385,12 @@ class Memcache:
 
     def append(self, key, value):
         '''Store data after existing data associated with this key.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: Value stored in memcache server for this key.
+        :type value: str
         '''
         command = 'append {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
@@ -383,6 +398,12 @@ class Memcache:
 
     def prepend(self, key, value):
         '''Store data before existing data associated with this key.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: Value stored in memcache server for this key.
+        :type value: str
         '''
         command = 'prepend {0} 0 0 {1}\r\n'.format(key,
                 len(value)) + value + '\r\n'
@@ -390,6 +411,11 @@ class Memcache:
 
     def delete(self, key):
         '''Delete the key if it exists.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`
         '''
         command = 'delete {0}\r\n'.format(key)
 
@@ -405,8 +431,16 @@ class Memcache:
                 .format(repr(data)))
 
     def touch(self, key, exptime):
-        '''Update the expiration time on an item.  Note that setting
-        exptime=0 causes the item not to expire based on time.
+        '''Update the expiration time on an item.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param exptime: If non-zero, it specifies the expriation time, in
+            seconds, for this value.  Note that setting exptime=0 causes the
+            item to not expire based on time.
+        :type exptime: int
+        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`
         '''
         command = 'touch {0} {1}\r\n'.format(key, exptime)
 
@@ -427,8 +461,10 @@ class Memcache:
             server.connect()
 
     def flush_all(self):
-        '''Flush the memcache server.  An attempt is made to connect to all
+        '''Flush the memcache servers.  An attempt is made to connect to all
         backend servers before running this command.
+
+        :raises: :py:exc:`NotImplementedError`
         '''
         command = 'flush_all\r\n'
 
