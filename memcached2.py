@@ -481,8 +481,21 @@ class Memcache:
                         .format(repr(data)))
 
     def _run_multi_server(self, function):
-        '''INTERNAL: Run statistics function() on each server, return a
-        list of the results from each server.'''
+        '''INTERNAL: Run statistics `function()` on each server.
+
+        This function iterates over all servers, and gathers statistics
+        via the `function` function if the server is up.  If it is not
+        up, the value `None` is used for that servers statistics.
+
+        :param function: A function which takes a
+            :py:class:`~memcached2.ServerConnection` object as an argument,
+            and returns statistics data for that server.
+        :type function: :py:class:`~memcached2.ServerConnection` object
+        :returns: list -- A list where each element represents the statistics
+            from the server specified in the same list position when the
+            :py:class:`~memcached2.Memcache` object was created.  If the
+            server is down, `None` is put in place of that servers statistics.
+        '''
         results = []
         self._reconnect_all()
         for server in self.servers:
@@ -495,15 +508,16 @@ class Memcache:
     def stats(self):
         '''Get general statistics about memcache servers.
 
-        The statistics data is a dictionary of key/value pairs representing
-        information about the server.
-
-        This data is returned as a list of statistics, one item for
-        each server.  If the server is not connected, None is returned
-        for its position, otherwise data as mentioned above.
-
         **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
+
+        :returns: list --
+            The statistics data is a dictionary of key/value pairs representing
+            information about the server.
+
+            This data is returned as a list of statistics, one item for
+            each server.  If the server is not connected, `None` is returned
+            for its position, otherwise data as mentioned above.
         '''
         def query(server):
             command = 'stats\r\n'
@@ -544,16 +558,17 @@ class Memcache:
         '''Get statistics about item storage per slab class from the
         memcache servers.
 
-        The statistic information is a dictionary keyed by the "slab class",
-        with the value another dictionary of key/value pairs representing
-        the slab information.
-
-        This data is returned as a list of statistics, one item for
-        each server.  If the server is not connected, None is returned
-        for its position, otherwise data as mentioned above.
-
         **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
+
+        :returns: list --
+            The statistic information is a dictionary keyed by the "slab
+            class", with the value another dictionary of key/value pairs
+            representing the slab information.
+
+            This data is returned as a list of statistics, one item for
+            each server.  If the server is not connected, None is returned
+            for its position, otherwise data as mentioned above.
         '''
         def query(server):
             command = 'stats items\r\n'
@@ -588,17 +603,18 @@ class Memcache:
         runtime.  Returns a dictionary of slab IDs, each contains a dictionary
         of key/value pairs for that slab.
 
-        The statistic information is a dictionary keyed by the "slab class",
-        with the value another dictionary of key/value pairs representing
-        statistic information about each of the slabs created during the
-        memcace runtime.
-
-        This data is returned as a list of statistics, one item for
-        each server.  If the server is not connected, None is returned
-        for its position, otherwise data as mentioned above.
-
         **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
+
+        :returns: list --
+            The statistic information is a dictionary keyed by the "slab
+            class", with the value another dictionary of key/value pairs
+            representing statistic information about each of the slabs
+            created during the memcace runtime.
+
+            This data is returned as a list of statistics, one item
+            for each server.  If the server is not connected, None is
+            returned for its position, otherwise data as mentioned above.
         '''
         def query(server):
             command = 'stats slabs\r\n'
@@ -638,14 +654,15 @@ class Memcache:
         '''Gets statistics about settings (primarily from processing
         command-line arguments).
 
-        The statistic information is a dictionary of key/value pairs.
-
-        This data is returned as a list of statistics, one item for
-        each server.  If the server is not connected, None is returned
-        for its position, otherwise data as mentioned above.
-
         **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
+
+        :returns: list --
+            The statistic information is a dictionary of key/value pairs.
+
+            This data is returned as a list of statistics, one item for
+            each server.  If the server is not connected, None is returned
+            for its position, otherwise data as mentioned above.
         '''
         def query(server):
             command = 'stats settings\r\n'
@@ -678,19 +695,20 @@ class Memcache:
     def stats_sizes(self):
         '''Get statistics about object sizes.
 
-        Each statistic is a dictionary of of size:count where the size is
-        rounded up to 32-byte ranges.
-
         **WARNING**: This operation locks the cache while it iterates
         over all objects.  Returns a list of (size,count) tuples received
         from the server.
 
-        This data is returned as a list of statistics, one item for
-        each server.  If the server is not connected, None is returned
-        for its position, otherwise data as mentioned above.
-
         **NOTE:** An attempt is made to connect to all servers before issuing
         this command.
+
+        :returns: list --
+            Each statistic is a dictionary of of size:count where the size is
+            rounded up to 32-byte ranges.
+
+            This data is returned as a list of statistics, one item for
+            each server.  If the server is not connected, None is returned
+            for its position, otherwise data as mentioned above.
         '''
         def query(server):
             command = 'stats sizes\r\n'
@@ -712,20 +730,45 @@ class Memcache:
 
     def incr(self, key, value):
         '''Increment the value for the key, treated as a 64-bit unsigned value.
-        Return the new value.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: A numeric value to add to the existing value.
+        :type value: int (64 bit)
+        :returns: int -- (64 bits) The new value after the increment.
+        :raises: :py:exc:`~memcached2.NotFound`,
+            :py:exc:`~memcached2.NonNumeric`, :py:exc:`NotImplementedError`
         '''
         command = 'incr {0} {1}\r\n'.format(key, value)
         return self._incrdecr_command(command, key)
 
     def decr(self, key, value):
         '''Decrement the value for the key, treated as a 64-bit unsigned value.
-        Return the new value.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: A numeric value to add to the existing value.
+        :type value: int (64 bit)
+        :returns: int -- (64 bits) The new value after the decrement.
+        :raises: :py:exc:`~memcached2.NotFound`,
+            :py:exc:`~memcached2.NonNumeric`, :py:exc:`NotImplementedError`
         '''
         command = 'decr {0} {1}\r\n'.format(key, value)
         return self._incrdecr_command(command, key)
 
     def _incrdecr_command(self, command, key):
         '''INTERNAL: Increment/decrement command back-end.
+
+        :param command: The memcache-protocol command to send to the
+            server, a string terminated with "\r\n".
+        :type command: str
+        :param key: The key within the command, used to determine what
+            server to send the command to.
+        :type key: str
+        :raises: :py:exc:`~memcached2.NotFound`,
+            :py:exc:`~memcached2.NonNumeric`, :py:exc:`NotImplementedError`
         '''
         server = self._send_command(command, key)
         data = server.read_until('\r\n')
@@ -744,7 +787,17 @@ class Memcache:
                 .format(repr(data)))
 
     def _storage_command(self, command, key):
-        '''INTERNAL: Storage command back-end.
+        '''INTERNAL: Send storage command to server and parse results.
+
+        :param command: The memcache-protocol command to send to the
+            server, a string terminated with "\r\n".
+        :type command: str
+        :param key: The key within the command, used to determine what
+            server to send the command to.
+        :type key: str
+        :raises: :py:exc:`~memcached2.NotFound`,
+            :py:exc:`~memcached2.NotStored`, :py:exc:`~memcached2.CASFailure`,
+            :py:exc:`NotImplementedError`
         '''
         server = self._send_command(command, key)
 
@@ -763,7 +816,7 @@ class Memcache:
                 .format(repr(data)))
 
     def close(self):
-        '''Close the connection to the backend servers.
+        '''Close the connection to all the backend servers.
         '''
 
         for server in self.servers:
