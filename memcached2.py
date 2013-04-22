@@ -194,7 +194,8 @@ class SelectorAvailableServers:
 
 class Memcache:
     '''
-    Create a new Memcache connection, to the specified servers.
+    Create a new memcache connection, to the specified servers.
+
     The list of servers, specified by URL, are consulted based on the
     hash of the key, effectively "sharding" the key space.
 
@@ -214,19 +215,21 @@ class Memcache:
 
     def __init__(self, servers, selector=None, hasher=None):
         '''
-        :param servers: One or more server URIs of the form: 
+        :param servers: One or more server URIs of the form:
             "memcache://hostname[:port]/"
         :type servers: list
         :param selector: (None) A "Selector" class object.  This code implements
             the server selector logic.  If not specified, the default is used.
-            The default is to use :class:`SelectorFirst` if only one server
-            is specified, and :class:`SelectorAvailableServers` if multiple
+            The default is to use :py:class:`~memcached2.SelectorFirst` if
+            only one server is specified, and
+            :py:class:`~memcached2.SelectorAvailableServers` if multiple
             servers are given.
         :type selector: "Selector" class object.
         :param hasher: (None) A "Hash" object which takes a key and returns
             a hash for persistent server selection.  If not specified, it
-            defaults to :class:`HasherNone` if there is only one server
-            specified, or :class:`HasherCMemcache` otherwise.
+            defaults to :py:class:`~memcache2.HasherNone` if there is only
+            one server specified, or :py:class:`~memcache2.HasherCMemcache`
+            otherwise.
         :type hasher: "Hash" class object.
         '''
 
@@ -258,8 +261,8 @@ class Memcache:
         :param key: The key within the command, used to determine what
             server to send the command to.
         :type key: str
-        :returns: :class:`ServerConnection` -- The server object that the
-            command was sent to.
+        :returns: :py:class:`~memcached2.ServerConnection` -- The server object
+            that the command was sent to.
         '''
         command = _to_bytes(command)
         server = self.selector.select(self.servers, self.hasher.hash(key))
@@ -271,14 +274,13 @@ class Memcache:
 
         :param key: The key to lookup in the memcache server.
         :type key: str
-        :param get_cas: (default=False) If True, the "cas unique"
-            is queried and the return object has the "cas_unique"
-            attribute set.
+        :param get_cas: If True, the "cas unique" is queried and the return
+            object has the "cas_unique" attribute set.
         :type get_cas: bool
-        :returns: :class:`MemcacheValue` -- The value read from the server,
-            which includes attributes specifying the key and flags, otherwise
-            it acts like a string.
-        :raises: NoValue, NotImplementedError
+        :returns: :py:class:`~memcached2.MemcacheValue` -- The value read from
+            the server, which includes attributes specifying the key and
+            flags, otherwise it acts like a string.
+        :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`
         '''
 
         if get_cas:
@@ -316,12 +318,24 @@ class Memcache:
         return MemcacheValue(body, key, flags, cas_unique)
 
     def set(self, key, value, flags=0, exptime=0, cas_unique=None):
-        '''Set a key to the value in the memcache server.  If the "flags"
-        are specified, those same flags will be provided on return.  If
-        "exptime" is set to non-zero, it specifies the expriation time, in
-        seconds, that this key's data expires.  If "cas_unique" is given,
-        it is a 64-bit integer from get(key, get_cas=True), the set is only
-        done if the value has not been updated since the get.
+        '''Set a key to the value in the memcache server.
+
+        :param key: Key used to store value in memcache server and hashed to
+            determine which server is used.
+        :type key: str
+        :param value: Value stored in memcache server for this key.
+        :type value: str
+        :param flags: If specified, the same value will be provided on
+                :func:`get`.
+        :type flags: int (32 bits)
+        :param exptime: If non-zero, it specifies the expriation time, in
+            seconds, for this value.
+        :type exptime: int
+        :param cas_unique: If specified as the 64-bit integer from
+            :py:func:`~memcached2.Memcache.get` with `cas_unique=True`, the
+            value is only stored if the value has not been updated since
+            the :py:func:`~memcached2.Memcache.get` call.
+        :type cas_unique: int (64 bits)
         '''
         if cas_unique:
             command = 'cas {0} {1} {2} {3} {4}\r\n'.format(key,
@@ -329,7 +343,7 @@ class Memcache:
         else:
             command = 'set {0} {1} {2} {3}\r\n'.format(key,
                     flags, exptime, len(value)) + value + '\r\n'
-        return self._storage_command(command, key)
+        self._storage_command(command, key)
 
     def add(self, key, value, flags=0, exptime=0):
         '''Store, but only if the server doesn't already hold data for it.
