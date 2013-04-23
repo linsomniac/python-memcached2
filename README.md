@@ -32,6 +32,12 @@ be protected by try/except.
     >>> except Memcached2.StoretrieveException:
     >>>     pass
 
+Documentation
+-------------
+
+The documentation is available at
+[python-memcached2 on Read The Docs](https://python-memcached2.readthedocs.org/en/latest/)
+
 Helping Out
 -----------
 
