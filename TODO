@@ -1,4 +1,5 @@
 Documentation.
+   Document Hasher and Selector.  Maybe create base class?
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
       How will that work, considering they could hash to multiple servers?
       Collect the ones that go to the same server and send them as groups?
