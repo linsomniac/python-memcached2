@@ -92,7 +92,9 @@ class ServerDisconnect(MemcachedException):
 
 class NoAvailableServers(MemcachedException):
     '''There are no servers available to cache on, probably because all
-    are unavailable..  Subclass of :class:`MemcachedException`.'''
+    are disconnected.  This exception typically occurs after the code
+    which would do a reconnection is run.
+    Subclass of :class:`MemcachedException`.'''
 
 
 class StoreException(MemcachedException):
@@ -164,39 +166,134 @@ class MemcacheValue(str):
         return data
 
 
-class HasherNone:
-    '''Hasher that always returns None, useful only for SelectorFirst.'''
+class HasherBase:
+    '''Turn memcache keys into hashes, for use in server selection.
+
+    Normally, the python-memcached2 classes will automatically select a
+    hasher to use.  However, for special circumstances you may wish to
+    use a different hasher or develop your own.
+
+    This is an abstract base class, here largely for documentation purposes.
+    Hasher sub-classes such as :py:class:`~memcached2.HasherZero` and
+    :py:class:`~memcached2.HasherCMemcache`, implement a `hash` method
+    which does all the work.
+
+    See :py:func:`~memcached2.HasherBase.hash` for details of implementing
+    a subclass.
+    '''
     def hash(self, key):
-        return None
+        '''Hash a key into a number.
+
+        This must persistently turn a string into the same value.  That value
+        is used to determine which server to use for this key.
+
+        :param key: memcache key
+        :type key: str
+        :returns: int -- Hashed version of `key`.
+        '''
+        raise NotImplementedError('This class is only meant to be subclassed')
 
 
-class HasherCMemcache:
-    '''Hasher compatible with the C memcache hash function'''
+class HasherZero(HasherBase):
+    '''Hasher that always returns 0, useful only for
+    :py:class:`~memcached2.SelectorFirst`.'''
     def hash(self, key):
+        '''See :py:func:`memcached2.HasherBase.hash` for details of
+        this function.
+        '''
+        return 0
+
+
+class HasherCMemcache(HasherBase):
+    '''Hasher compatible with the C memcache hash function.'''
+    def hash(self, key):
+        '''See :py:func:`memcached2.HasherBase.hash` for details of
+        this function.
+        '''
         key = _to_bytes(key)
         return ((((crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
 
 
-class SelectorFirst:
-    '''Server selector that only returns the first server.  Useful when there
-    is only one server to select amongst.'''
+class SelectorBase:
+    '''Select which server to use and reconnect to down servers.
+
+    These classes implement both the algorithm for selecting the server and
+    for reconnecting to servers that are down.
+
+    The selection is done based on a `key_hash`, as returned by the
+    :py:func:`memcached2.HasherBase.hash` function.  Servers that are
+    down must be reconnected to, as all servers initially start off
+    disconnected.
+
+    Normally, the python-memcached2 classes will automatically pick a
+    selector to use.  However, for special circumstances you may wish to
+    use a different selector or develop your own.
+
+    This is an abstract base class, here largely for documentation purposes.
+    Selector sub-classes such as :py:class:`~memcached2.SelectorFirst` and
+    :py:class:`~memcached2.SelectorAvailableServers`, implement a `select`
+    method which does all the work.
+
+    See :py:func:`~memcached2.SelectorBase.select` for details of implementing
+    a subclass.
+    '''
     def select(self, server_list, key_hash):
+        '''Select a server bashed on the `key_hash`.
+
+        Given the list of servers and a hash of of key, determine which
+        of the servers this key is stored on.
+
+        This often makes use of the `backend` attribute of the `server_list`
+        elements, if it is None, the server is not currently connected
+        to.
+
+        :param server_list: A list of the servers to select among.
+        :type server_list: list of :py:class:`~memcache2.ServerConnection`.
+        :param key_hash: Hash of the key, as returned by
+            :py:func:`memcache2.HasherBase.hash`.
+        :type key_hash: int
+        :returns: ServerConnection -- The server to use for the specified key.
+        :raises: :py:exc:`~memcached2.NoAvailableServers`
+        '''
+        raise NotImplementedError('This class is only meant to be subclassed')
+
+
+class SelectorFirst(SelectorBase):
+    '''Server selector that only returns the first server.  Useful when there
+    is only one server to select amongst.
+
+    If the server is down, an attempt to reconnect will be made.
+    '''
+    def select(self, server_list, key_hash):
+        '''See :py:func:`memcached2.SelectorBase.select` for details of
+        this function.
+        '''
         server = server_list[0]
         if not server.backend:
             server.connect()
         return server
 
 
-class SelectorAvailableServers:
-    '''Select among all "up" server connections, reconnecting to down servers
-    periodically.'''
+class SelectorAvailableServers(SelectorBase):
+    '''Select among all "up" server connections.
+
+    After a specified number of operations, and at the first operation, an
+    attempt will be made to connect to any servers that are not currently
+    up.
+    '''
     def __init__(self, reconnect_frequency=100):
-        '''Selector that attempts to reconnect to down servers every
-        "reconnect_frequency" operations (default: 100).'''
+        '''
+        :param reconnect_frequency: Every this many operations, attempt
+            reconecting to all down servers.
+        :type reconnect_frequency: int
+        '''
         self.reconnect_frequency = reconnect_frequency
         self.operations_to_next_reconnect = 0
 
     def select(self, server_list, key_hash):
+        '''See :py:func:`memcached2.SelectorBase.select` for details of
+        this function.
+        '''
         if self.operations_to_next_reconnect < 1:
             self.operations_to_next_reconnect = self.reconnect_frequency
             for server in [x for x in server_list if not x.backend]:
@@ -246,7 +343,7 @@ class Memcache:
         :type selector: "Selector" class object.
         :param hasher: (None) A "Hash" object which takes a key and returns
             a hash for persistent server selection.  If not specified, it
-            defaults to :py:class:`~memcache2.HasherNone` if there is only
+            defaults to :py:class:`~memcache2.HasherZero` if there is only
             one server specified, or :py:class:`~memcache2.HasherCMemcache`
             otherwise.
         :type hasher: "Hash" class object.
@@ -262,7 +359,7 @@ class Memcache:
             if len(self.servers) < 2:
                 self.selector = SelectorFirst()
                 if hasher == None:
-                    self.hasher = HasherNone()
+                    self.hasher = HasherZero()
             else:
                 self.selector = SelectorAvailableServers()
                 if hasher == None:
@@ -282,6 +379,7 @@ class Memcache:
         :type key: str
         :returns: :py:class:`~memcached2.ServerConnection` -- The server object
             that the command was sent to.
+        :raises: :py:exc:`~memcached2.NoAvailableServers`
         '''
         command = _to_bytes(command)
         server = self.selector.select(self.servers, self.hasher.hash(key))
@@ -299,7 +397,8 @@ class Memcache:
         :returns: :py:class:`~memcached2.MemcacheValue` -- The value read from
             the server, which includes attributes specifying the key and
             flags, otherwise it acts like a string.
-        :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`
+        :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
         '''
 
         if get_cas:
@@ -434,7 +533,8 @@ class Memcache:
         :param key: Key used to store value in memcache server and hashed to
             determine which server is used.
         :type key: str
-        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`
+        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
         '''
         command = 'delete {0}\r\n'.format(key)
 
@@ -459,7 +559,8 @@ class Memcache:
             seconds, for this value.  Note that setting exptime=0 causes the
             item to not expire based on time.
         :type exptime: int
-        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`
+        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
         '''
         command = 'touch {0} {1}\r\n'.format(key, exptime)
 
@@ -787,7 +888,8 @@ class Memcache:
             server to send the command to.
         :type key: str
         :raises: :py:exc:`~memcached2.NotFound`,
-            :py:exc:`~memcached2.NonNumeric`, :py:exc:`NotImplementedError`
+            :py:exc:`~memcached2.NonNumeric`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
         '''
         server = self._send_command(command, key)
         data = server.read_until('\r\n')
@@ -816,7 +918,8 @@ class Memcache:
         :type key: str
         :raises: :py:exc:`~memcached2.NotFound`,
             :py:exc:`~memcached2.NotStored`, :py:exc:`~memcached2.CASFailure`,
-            :py:exc:`NotImplementedError`
+            :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
         '''
         server = self._send_command(command, key)
 

@@ -102,7 +102,7 @@ class test_ServerConnection(unittest.TestCase):
         sc2.reset()
 
     def test_Hashers(self):
-        self.assertEqual(memcached2.HasherNone().hash('x'), None)
+        self.assertEqual(memcached2.HasherZero().hash('x'), 0)
         self.assertEqual(memcached2.HasherCMemcache().hash('x'), 3292)
         self.assertEqual(memcached2.HasherCMemcache().hash('y'), 31707)
 
