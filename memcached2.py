@@ -52,7 +52,7 @@ def _from_bytes(data):
 
 
 def _to_bytes(data):
-    '''Internal: Convert something to bytes type.'''
+    '''INTERNAL: Convert something to bytes type.'''
     if PY3:
         if isinstance(data, bytes):
             return data
@@ -133,10 +133,29 @@ class NoValue(RetrieveException):
 
 
 class MemcacheValue(str):
-    '''Wrapper around Memcache value results, to augment the return data to
-    include the additional information (flags, key, cas_unique)'''
+    '''Wrapper around Memcache value results.
+
+    This acts as a string normally, containing the value read from the
+    server.  However, it is augmented with additional attributes representing
+    additional data received from the server: `flags`, `key`, and
+    `cas_unique` (which may be None if it was not requested from the server).
+    '''
 
     def __new__(self, value, key, flags, cas_unique=None):
+        '''Instantiate new instance.
+
+        :param value: The memcache `value`, which is the value of this
+            class when treated like a string.
+        :type value: str
+        :param key: The `key` associated with the `value` retrieved.
+        :type key: str
+        :param flags: `flags` associated with the `value` retrieved.
+        :type flags: int
+        :param cas_unique: The `cas_unique` value, if it was queried, or
+            None if no CAS information was retrieved.
+        :type cas_unique: int
+        :returns: :py:class:`~memcached2.MemcacheValue` instance
+        '''
         data = super(MemcacheValue, self).__new__(self, value)
         data.key = key
         data.flags = flags
