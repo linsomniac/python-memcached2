@@ -824,20 +824,40 @@ class Memcache:
 
 
 class ServerConnection:
-    '''Low-level communication with the memcached server.  This implments
-    the connection to the server, sending messages and parsing responses.'''
+    '''Low-level communication with the memcached server.
 
-    def __init__(self, uri, timeout=None):
+    Data should be passed in as strings, and that is converted to `bytes`
+    for sending to the backend, encoded as ASCII, if necessary.  Data
+    returned is likewise converted from `bytes`, also encoded as ASCII,
+    if necessary.
+
+    This implments the connection to a server, sending messages and reading
+    responses.  This is largely intended to be used by other modules in the
+    memcached2 module such as :py:class:`~memcached2.Memcache()` rather than
+    directly by consumers.
+
+    Note that this class buffers data read from the server, so you should
+    **never** read data directly from the underlying socket, as it may
+    confuse other software which uses this interface.
+    '''
+
+    def __init__(self, uri):
+        '''
+        :param uri: The URI of the backend server.
+        :type uri: str
+        '''
+
         self.uri = uri
         self.parsed_uri = self.parse_uri()
-        self.timeout = timeout
         self.backend = None
         self.buffer_readsize = 10000
         self.reset()
 
     def reset(self):
-        '''Reset the connection including flushing buffered data and closing
-        the backend connection.'''
+        '''Reset the connection.
+
+        Flushes buffered data and closes the backend connection.
+        '''
 
         self.buffer = ''
         if self.backend:
@@ -845,16 +865,33 @@ class ServerConnection:
         self.backend = None
 
     def consume_from_buffer(self, length):
-        '''Retrieve the specified number of bytes from the buffer'''
+        '''Retrieve the specified number of bytes from the buffer.
+
+        :param length: Number of bytes of data to consume from buffer.
+        :type length: int
+        :returns: str -- Data from buffer.
+        '''
 
         data = self.buffer[:length]
         self.buffer = self.buffer[length:]
         return data
 
     def parse_uri(self):
-        '''Parse a server connection URI.  Returns a dictionary with the
-        connection information, including a 'protocol' key and other
-        protocol-specific keys.'''
+        '''Parse a server connection URI.
+
+        Parses the `uri` attribute of this object.
+
+        Currently, the only supported URI format is of the form:
+
+            * memcached://<hostname>[:port]/ -- A TCP socket connection to \
+                    the host, optionally on the specified port.  If \
+                    `port` is not specified, port 11211 is used.
+
+        :returns: dict -- A dictionary with the key `protocol` and other
+            protocol-specific keys.  For `memcached` protocol the keys
+            include `host`, and `port`.
+        :raises: :py:exc:`~memcached2.InvalidURI`
+        '''
 
         m = re.match(r'memcached://(?P<host>[^:]+)(:(?P<port>[0-9]+))?/',
                 self.uri)
@@ -870,8 +907,13 @@ class ServerConnection:
         raise InvalidURI('Invalid URI: {0}'.format(self.uri))
 
     def connect(self):
-        '''Connect to memcached server.  If already connected,
-        this function returns immmediately.'''
+        '''Connect to memcached server.
+
+        If already connected, this function returns immmediately.  Otherwise,
+        the connection is reset and a connection is made to the backend.
+
+        :raises: :py:exc:`~memcached2.UnknownProtocol`
+        '''
 
         if self.backend:
             return
@@ -887,13 +929,30 @@ class ServerConnection:
                 .format(self.parsed_uri['protocol']))
 
     def send_command(self, command):
-        '''Write an ASCII command to the memcached server.'''
+        '''Write an ASCII command to the memcached server.
+
+        :param command: Data that is sent to the server.  This is converted
+            to a `bytes` type with ASCII encoding if necessary for sending
+            across the socket.
+        :type command: str
+        '''
 
         self.backend.send(_to_bytes(command))
 
     def read_until(self, search):
-        '''Read data from the server until "search" is found.  Return data read
-        including the first occurrence of "search".'''
+        '''Read data from the server until "search" is found.
+
+        Data is read in blocks, any remaining data beyond `search` is held
+        in a buffer to be consumed in the future.
+
+        :param search: Read data from the server until `search` is found.
+        :type search: str
+
+        :returns: str -- Data read, up to and including `search`.  Converted
+            from `bytes` (as read from backend) with ASCII encoding, if
+            necessary.
+        :raises: :py:exc:`~memcached2.ServerDisconnect`
+        '''
         start = 0
         search_len = len(search)
 
@@ -914,7 +973,15 @@ class ServerConnection:
             self.buffer += data
 
     def read_length(self, length):
-        '''Read the specified number of bytes.  Return data read.'''
+        '''Read the specified number of bytes.
+
+        :param length: Number of bytes of data to read.
+        :type length: int
+
+        :returns: str -- Data read from socket.  Converted from `bytes`
+            (as read from backend) with ASCII encoding, if necessary.
+        :raises: :py:exc:`~memcached2.ServerDisconnect`
+        '''
         while len(self.buffer) < length:
             try:
                 data = _from_bytes(self.backend.recv(self.buffer_readsize))
