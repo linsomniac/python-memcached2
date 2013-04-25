@@ -583,8 +583,10 @@ class Memcache:
     def flush_all(self):
         '''Flush the memcache servers.
 
-        **NOTE:** An attempt is made to connect to all backend servers
-        before running this command.
+        .. note::
+
+            An attempt is made to connect to all backend servers
+            before running this command.
 
         :raises: :py:exc:`NotImplementedError`
         '''
@@ -628,8 +630,10 @@ class Memcache:
     def stats(self):
         '''Get general statistics about memcache servers.
 
-        **NOTE:** An attempt is made to connect to all servers before issuing
-        this command.
+        .. note::
+
+            An attempt is made to connect to all servers before issuing
+            this command.
 
         :returns: list --
             The statistics data is a dictionary of key/value pairs representing
@@ -678,8 +682,10 @@ class Memcache:
         '''Get statistics about item storage per slab class from the
         memcache servers.
 
-        **NOTE:** An attempt is made to connect to all servers before issuing
-        this command.
+        .. note::
+
+            An attempt is made to connect to all servers before issuing
+            this command.
 
         :returns: list --
             The statistic information is a dictionary keyed by the "slab
@@ -723,8 +729,10 @@ class Memcache:
         runtime.  Returns a dictionary of slab IDs, each contains a dictionary
         of key/value pairs for that slab.
 
-        **NOTE:** An attempt is made to connect to all servers before issuing
-        this command.
+        .. note::
+
+            An attempt is made to connect to all servers before issuing
+            this command.
 
         :returns: list --
             The statistic information is a dictionary keyed by the "slab
@@ -774,8 +782,10 @@ class Memcache:
         '''Gets statistics about settings (primarily from processing
         command-line arguments).
 
-        **NOTE:** An attempt is made to connect to all servers before issuing
-        this command.
+        .. note::
+
+            An attempt is made to connect to all servers before issuing
+            this command.
 
         :returns: list --
             The statistic information is a dictionary of key/value pairs.
@@ -815,12 +825,16 @@ class Memcache:
     def stats_sizes(self):
         '''Get statistics about object sizes.
 
-        **WARNING**: This operation locks the cache while it iterates
-        over all objects.  Returns a list of (size,count) tuples received
-        from the server.
+        .. warning::
 
-        **NOTE:** An attempt is made to connect to all servers before issuing
-        this command.
+            This operation locks the cache while it iterates over all
+            objects.  Returns a list of (size,count) tuples received
+            from the server.
+
+        .. note::
+
+            An attempt is made to connect to all servers before issuing
+            this command.
 
         :returns: list --
             Each statistic is a dictionary of of size:count where the size is
