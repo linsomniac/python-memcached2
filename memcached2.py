@@ -372,7 +372,7 @@ class Memcache:
         '''INTERNAL: Send a command to a server.
 
         :param command: The memcache-protocol command to send to the
-            server, a string terminated with "\r\n".
+            server, a string terminated with CR+NL.
         :type command: str
         :param key: The key within the command, used to determine what
             server to send the command to.
@@ -896,7 +896,7 @@ class Memcache:
         '''INTERNAL: Increment/decrement command back-end.
 
         :param command: The memcache-protocol command to send to the
-            server, a string terminated with "\r\n".
+            server, a string terminated with CR+NL.
         :type command: str
         :param key: The key within the command, used to determine what
             server to send the command to.
@@ -925,7 +925,7 @@ class Memcache:
         '''INTERNAL: Send storage command to server and parse results.
 
         :param command: The memcache-protocol command to send to the
-            server, a string terminated with "\r\n".
+            server, a string terminated with CR+NL.
         :type command: str
         :param key: The key within the command, used to determine what
             server to send the command to.
