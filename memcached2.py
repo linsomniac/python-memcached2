@@ -327,6 +327,10 @@ class Memcache:
     >>> mc.get('foo')
     'bar'
 
+    Extensive examples including demonstrations of the statistics output
+    is available in the documentation for
+    :ref:`Memcache Examples <memcached-examples>`
+
     '''
 
     def __init__(self, servers, selector=None, hasher=None):
@@ -630,6 +634,10 @@ class Memcache:
     def stats(self):
         '''Get general statistics about memcache servers.
 
+        Examples of the results of this function is available in the
+        documentation as
+        :ref:`Memcache Statistics Examples <memcached-stats-examples>`
+
         .. note::
 
             An attempt is made to connect to all servers before issuing
@@ -682,6 +690,10 @@ class Memcache:
         '''Get statistics about item storage per slab class from the
         memcache servers.
 
+        Examples of the results of this function is available in the
+        documentation as
+        :ref:`Memcache Statistics Examples <memcached-stats-examples>`
+
         .. note::
 
             An attempt is made to connect to all servers before issuing
@@ -728,6 +740,10 @@ class Memcache:
         '''Gets information about each of the slabs created during memcached
         runtime.  Returns a dictionary of slab IDs, each contains a dictionary
         of key/value pairs for that slab.
+
+        Examples of the results of this function is available in the
+        documentation as
+        :ref:`Memcache Statistics Examples <memcached-stats-examples>`
 
         .. note::
 
@@ -782,6 +798,10 @@ class Memcache:
         '''Gets statistics about settings (primarily from processing
         command-line arguments).
 
+        Examples of the results of this function is available in the
+        documentation as
+        :ref:`Memcache Statistics Examples <memcached-stats-examples>`
+
         .. note::
 
             An attempt is made to connect to all servers before issuing
@@ -824,6 +844,10 @@ class Memcache:
 
     def stats_sizes(self):
         '''Get statistics about object sizes.
+
+        Examples of the results of this function is available in the
+        documentation as
+        :ref:`Memcache Statistics Examples <memcached-stats-examples>`
 
         .. warning::
 
