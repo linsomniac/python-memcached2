@@ -36,6 +36,7 @@ import re
 import socket
 import sys
 from binascii import crc32
+import collections
 
 PY3 = sys.version > '3'
 if not PY3:
@@ -132,6 +133,39 @@ class RetrieveException(MemcachedException):
 class NoValue(RetrieveException):
     '''Server has no data associated with this key..
     Subclass of :class:`RetrieveException`.'''
+
+
+class ObliviousDict(collections.MutableMapping):
+    def __init__(self, servers, selector=None, hasher=None):
+        ret = super(ObliviousDict, self).__init__()
+        self.memcache = Memcache(servers, selector, hasher)
+        return ret
+
+    def __getitem__(self, key):
+        try:
+            return self.memcache.get(key)
+        except NoValue:
+            return None
+
+    def __setitem__(self, key, value):
+        self.memcache.set(key, value)
+        return True
+
+    def __delitem__(self, key):
+        try:
+            self.memcache.delete(key)
+            return True
+        except NotFound:
+            return False
+
+    def __iter__(self):
+        raise NotImplementedError()
+
+    def __len__(self):
+        items = 0
+        for server_stats in self.memcache.stats():
+            items += server_stats.get('curr_items', 0)
+        return items
 
 
 class MemcacheValue(str):
