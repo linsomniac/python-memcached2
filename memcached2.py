@@ -165,6 +165,13 @@ class ObliviousDict(collections.MutableMapping):
         except NotFound:
             return False
 
+    def __contains__(self, key):
+        try:
+            self.memcache.get(key)
+            return True
+        except NoValue:
+            return False
+
     def __iter__(self):
         raise NotImplementedError()
 
