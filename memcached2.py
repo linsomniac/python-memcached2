@@ -136,6 +136,14 @@ class NoValue(RetrieveException):
 
 
 class ObliviousDict(collections.MutableMapping):
+    '''A dictionary-like interface which swallows exceptions.
+
+    This is a higher-level interface on top of :py:class:`~memcached2.Memcache`
+    which implements a dictionary interface to Memcache.  However, all
+    exceptions except :exc:`NotImplementedError` are swallowed.  For example,
+    trying to retrieve a key that is not in the memcached results in None
+    instead of a :exc:`KeyError` or :py:exc:`~memcached2.NotFound`.
+    '''
     def __init__(self, servers, selector=None, hasher=None):
         ret = super(ObliviousDict, self).__init__()
         self.memcache = Memcache(servers, selector, hasher)
@@ -149,7 +157,6 @@ class ObliviousDict(collections.MutableMapping):
 
     def __setitem__(self, key, value):
         self.memcache.set(key, value)
-        return True
 
     def __delitem__(self, key):
         try:
