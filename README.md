@@ -5,6 +5,11 @@ A new 100% Python memcache client library.  This is targeted at Python 3.3+
 and Python 2.7, though it may be possible for it to work with Python 2.6 as
 well.
 
+**2013-04-26**: I did some more documentation and consider it to be
+completed for the low level code.  I don't consider it to be generally
+usable, so I'm not putting it up on pypi, but I am going to tag it as
+release-0.1.
+
 **2013-04-23**: Completed the documentation.  However, this module
 probably isn't ready for use yet, as the routines are still fairly low
 level.  A higher level interface is the next thing I plan on working
@@ -41,7 +46,7 @@ be protected by try/except.
 Documentation
 -------------
 
-The documentation is available at
+The documentation, including extensive examples, is available at
 [python-memcached2 on Read The Docs](https://python-memcached2.readthedocs.org/en/latest/)
 
 Helping Out
