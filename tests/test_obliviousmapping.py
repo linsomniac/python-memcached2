@@ -40,16 +40,18 @@ class test_ServerConnection(unittest.TestCase):
             for x in dic:
                 pass
 
-        self.assertEqual(dic["foo"], None)
-        dic["foo"] = 'hello'
-        self.assertEqual(dic["foo"], 'hello')
+        with self.assertRaises(KeyError):
+            dic['foo']
+        self.assertEqual(dic.get('foo'), None)
+        dic['foo'] = 'hello'
+        self.assertEqual(dic['foo'], 'hello')
         self.assertEqual('foo' in dic, True)
         self.assertEqual('qux' in dic, False)
-        del(dic["foo"])
-        del(dic["bar"])
+        del(dic['foo'])
+        del(dic['bar'])
         self.assertEqual('foo' in dic, False)
-        self.assertEqual(dic["foo"], None)
-        dic["zot"] = "a"
+        self.assertEqual(dic.get('foo'), None)
+        dic['zot'] = 'a'
         len(dic)
 
 unittest.main()

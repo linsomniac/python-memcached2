@@ -1,15 +1,17 @@
-High-Level Memcache() Interface
-*******************************
+No-exceptions Mapping
+*********************
 
 Introduction
 ------------
 
-This is a low-level interface to a group of memcache servers.  This code
-tends to either return the requested data, or raises an exception if the
-data is not available or there is any sort of an error.  If you want
-high level control, this is probably the interface for you.  However, if
-you want something easy, like the old python-memcached module, you will
-want to wait for the higher level interfaces to be implemented.
+This is a dictionary-like interface to Memcache, but it swallows
+exceptions, except in the case of coding errors.  This is meant
+for situations where you want to keep the code simple, and treat cache
+misses, server errors, and the like as cache misses.
+
+On the instantiation you specify the servers, and at that point it can be
+accessed as a dictionary, including access, setting, and deleting keys.
+See the examples for a demonstration.
 
 .. _obliviousmapping-examples:
 

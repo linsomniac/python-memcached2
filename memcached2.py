@@ -136,7 +136,7 @@ class NoValue(RetrieveException):
 
 
 class ObliviousMapping(collections.MutableMapping):
-    '''A dictionary-like interface which swallows exceptions.
+    '''A dictionary-like interface which swallows server exceptions.
 
     This is a higher-level interface on top of :py:class:`~memcached2.Memcache`
     which implements a dictionary interface to Memcache.  However, all
@@ -153,7 +153,7 @@ class ObliviousMapping(collections.MutableMapping):
         try:
             return self.memcache.get(key)
         except NoValue:
-            return None
+            raise KeyError(key)
 
     def __setitem__(self, key, value):
         self.memcache.set(key, value)
@@ -163,13 +163,6 @@ class ObliviousMapping(collections.MutableMapping):
             self.memcache.delete(key)
             return True
         except NotFound:
-            return False
-
-    def __contains__(self, key):
-        try:
-            self.memcache.get(key)
-            return True
-        except NoValue:
             return False
 
     def __iter__(self):
