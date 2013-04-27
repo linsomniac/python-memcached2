@@ -34,7 +34,7 @@ class test_ServerConnection(unittest.TestCase):
         mctestsupp.flush_local_memcache(self)
 
     def test_Basics(self):
-        dic = memcached2.ObliviousDict(('memcached://localhost/',))
+        dic = memcached2.ObliviousMapping(('memcached://localhost/',))
 
         with self.assertRaises(NotImplementedError):
             for x in dic:

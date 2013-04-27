@@ -135,7 +135,7 @@ class NoValue(RetrieveException):
     Subclass of :class:`RetrieveException`.'''
 
 
-class ObliviousDict(collections.MutableMapping):
+class ObliviousMapping(collections.MutableMapping):
     '''A dictionary-like interface which swallows exceptions.
 
     This is a higher-level interface on top of :py:class:`~memcached2.Memcache`
@@ -145,7 +145,7 @@ class ObliviousDict(collections.MutableMapping):
     instead of a :exc:`KeyError` or :py:exc:`~memcached2.NotFound`.
     '''
     def __init__(self, servers, selector=None, hasher=None):
-        ret = super(ObliviousDict, self).__init__()
+        ret = super(ObliviousMapping, self).__init__()
         self.memcache = Memcache(servers, selector, hasher)
         return ret
 
