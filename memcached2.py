@@ -138,11 +138,15 @@ class NoValue(RetrieveException):
 class ObliviousMapping(collections.MutableMapping):
     '''A dictionary-like interface which swallows server exceptions.
 
-    This is a higher-level interface on top of :py:class:`~memcached2.Memcache`
-    which implements a dictionary interface to Memcache.  However, all
-    exceptions except :exc:`NotImplementedError` are swallowed.  For example,
-    trying to retrieve a key that is not in the memcached results in None
-    instead of a :exc:`KeyError` or :py:exc:`~memcached2.NotFound`.
+    This is a dictionary-like interface to memcache, but it swallows
+    server exceptions, except in the case of coding errors.  This is
+    meant for situations where you want to keep the code simple, and
+    treat cache misses, server errors, and the like as cache misses.
+
+    See :ref:`ObliviousMapping Introduction <obliviousmapping-introduction>`
+    and :ref:`ObliviousMapping Examples <obliviousmapping-examples>`
+    for more information.
+
     '''
     def __init__(self, servers, selector=None, hasher=None):
         ret = super(ObliviousMapping, self).__init__()
