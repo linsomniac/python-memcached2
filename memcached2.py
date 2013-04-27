@@ -377,7 +377,7 @@ class Memcache:
 
     Extensive examples including demonstrations of the statistics output
     is available in the documentation for
-    :ref:`Memcache Examples <memcached-examples>`
+    :ref:`Memcache Examples <memcache-examples>`
 
     '''
 

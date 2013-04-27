@@ -12,11 +12,13 @@ baggage, improve testability/maintainability/performance, and support
 Python 3.  This codebase is regularly tested against Python 2.7 and Python
 3.3.
 
-As of April 2013 this is in active development and not quite suitable for
-use in production yet.  However, the core functionality is implemented and
-the higher level interfaces should come fairly quickly now.  The low level
-:py:class:`~memcached2.Memcache` class is complete and documented, see
-:py:class:`~memcached2.Memcache` for examples of use.
+The high level interface is dict-like:
+:py:class:`~memcached2.ObliviousMapping`.  It looks much like a dictionary
+but the back-end storage is memcache servers.
+
+The low level :py:class:`~memcached2.Memcache` class is complete and
+documented, see :ref:`Memcache Examples <memcache-examples>` for examples
+of use.
 
 Documentation Index
 -------------------
@@ -24,6 +26,7 @@ Documentation Index
 .. toctree::
    :maxdepth: 2
 
+   obliviousmappingclass
    hasherclass
    selectorclass
    memcachevalueclass

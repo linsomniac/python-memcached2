@@ -11,7 +11,7 @@ high level control, this is probably the interface for you.  However, if
 you want something easy, like the old python-memcached module, you will
 want to wait for the higher level interfaces to be implemented.
 
-.. _memcached-examples:
+.. _memcache-examples:
 
 Examples
 --------
