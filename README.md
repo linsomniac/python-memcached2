@@ -5,32 +5,39 @@ A new 100% Python memcache client library.  This is targeted at Python 3.3+
 and Python 2.7, though it may be possible for it to work with Python 2.6 as
 well.
 
-**2013-04-26**: I did some more documentation and consider it to be
-completed for the low level code.  I don't consider it to be generally
-usable, so I'm not putting it up on pypi, but I am going to tag it as
-release-0.1.
+**I am looking for feedback on this module, its design and architecture.**
 
-**2013-04-23**: Completed the documentation.  However, this module
-probably isn't ready for use yet, as the routines are still fairly low
-level.  A higher level interface is the next thing I plan on working
-on.
-
-**2013-04-19**: I'm considering the Memcache() class to be done.
-This class is the "lowest level" interface, and raises exceptions for
-unexpected cases.  I expect to now start working on a higher level
-interface, possibly that interface will swallow exceptions and instead
-just act like the operation was a cache miss, or silently ignore storage
-errors.
-
-**2013-04-01**: I've just started working on this, and it's a side
-project for a side project, so I have no timeline.  Use the regular
-python-memcached.  I assure you it's not an April fools joke though.
+**2013-04-27**: The module is usable, but if you do you should expect that
+the interfaces may change.  The high level
+:py:class:`~memcached2.ObliviousMapping` code is usable but not fully
+tested and the exceptions aren't all caught.  The low-level
+:py:class:`~memcached2.Memcache` code is basically complete, documented,
+and well tested.
 
 Example
 -------
 
-Right now, the only interface is an "error exposing" one that needs to
-be protected by try/except.
+The dictionary/mapping interface looks like this:
+
+    >>> import memcached2
+    >>> mcd = memcached2.ObliviousMapping(('memcached://localhost/',))
+    >>> 'foo' in mcd
+    False
+    >>> mcd['foo'] = 'hello'
+    >>> 'foo' in mcd
+    True
+    >>> mcd['foo']
+    'hello'
+    >>> len(mcd)
+    1
+    >>> del(mcd['foo'])
+    >>> len(mcd)
+    0
+
+The lower-level :py:class:`~memcached2.Memcache` interface raises
+exceptions in the cases of unexpected results or server connection issues.
+Here's a small example, many more examples are available in the
+documentation.
 
     >>> import memcached2
     >>> memcache = memcached2.Memcache(('memcached://localhost/',))
