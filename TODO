@@ -1,5 +1,4 @@
-Testing for exception conditions for ObliviousMapping.
-Rename ObliviousMapping.
+Testing for exception conditions for ExceptionsAreMissesMapper.
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
 Decide on what to do about automatic pickling.

@@ -7,10 +7,10 @@ well.
 
 **I am looking for feedback on this module, its design and architecture.**
 
-**2013-04-27**: The module is usable, but if you do you should expect that
-the interfaces may change.  The high level
-:py:class:`~memcached2.ObliviousMapping` code is usable but not fully
-tested and the exceptions aren't all caught.  The low-level
+**2013-04-27**: The module is usable, but if you do you
+should expect that the interfaces may change.  The high level
+:py:class:`~memcached2.ExceptionsAreMissesMapping code is usable but
+not fully tested and the exceptions aren't all caught.  The low-level
 :py:class:`~memcached2.Memcache` code is basically complete, documented,
 and well tested.
 
@@ -20,7 +20,7 @@ Example
 The dictionary/mapping interface looks like this:
 
     >>> import memcached2
-    >>> mcd = memcached2.ObliviousMapping(('memcached://localhost/',))
+    >>> mcd = memcached2.ExceptionsAreMissesMapping(('memcached://localhost/',))
     >>> 'foo' in mcd
     False
     >>> mcd['foo'] = 'hello'

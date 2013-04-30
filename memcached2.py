@@ -135,7 +135,7 @@ class NoValue(RetrieveException):
     Subclass of :class:`RetrieveException`.'''
 
 
-class ObliviousMapping(collections.MutableMapping):
+class ExceptionsAreMissesMapping(collections.MutableMapping):
     '''A dictionary-like interface which swallows server exceptions.
 
     This is a dictionary-like interface to memcache, but it swallows
@@ -143,13 +143,14 @@ class ObliviousMapping(collections.MutableMapping):
     meant for situations where you want to keep the code simple, and
     treat cache misses, server errors, and the like as cache misses.
 
-    See :ref:`ObliviousMapping Introduction <obliviousmapping-introduction>`
-    and :ref:`ObliviousMapping Examples <obliviousmapping-examples>`
-    for more information.
+    See :ref:`ExceptionsAreMissesMapping Introduction
+    <exceptionsaremissesmapping-introduction>`
+    and :ref:`ExceptionsAreMissesMapping Examples
+    <exceptionsaremissesmapping-examples>` for more information.
 
     '''
     def __init__(self, servers, selector=None, hasher=None):
-        ret = super(ObliviousMapping, self).__init__()
+        ret = super(ExceptionsAreMissesMapping, self).__init__()
         self.memcache = Memcache(servers, selector, hasher)
         return ret
 

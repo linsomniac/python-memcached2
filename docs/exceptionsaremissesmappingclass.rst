@@ -1,7 +1,7 @@
-Exception-oblivious Mapping
+Exception as Misses Mapping
 ***************************
 
-.. _obliviousmapping-introduction:
+.. _exceptionsaremissesmapping-introduction:
 
 Introduction
 ------------
@@ -26,7 +26,7 @@ where there are code errors.  So it's recommended that you don't just trap
 these, either catch and log them, or just let them raise up so that
 application users can report the bug.
 
-.. _obliviousmapping-examples:
+.. _exceptionsaremissesmapping-examples:
 
 Examples
 --------
@@ -34,7 +34,7 @@ Examples
 Basic example:
 
 >>> import memcached2
->>> mcd = memcached2.ObliviousMapping(('memcached://localhost/',))
+>>> mcd = memcached2.ExceptionsAreMissesMapping(('memcached://localhost/',))
 >>> 'foo' in mcd
 False
 >>> mcd['foo'] = 'hello'
@@ -51,5 +51,5 @@ True
 Object Documentation
 --------------------
 
-.. autoclass:: memcached2.ObliviousMapping
+.. autoclass:: memcached2.ExceptionsAreMissesMapping
    :members: 

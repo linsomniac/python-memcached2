@@ -13,8 +13,8 @@ Python 3.  This codebase is regularly tested against Python 2.7 and Python
 3.3.
 
 The high level interface is dict-like:
-:py:class:`~memcached2.ObliviousMapping`.  It looks much like a dictionary
-but the back-end storage is memcache servers.
+:py:class:`~memcached2.ExceptionsAreMissesMapping`.  It looks much like
+a dictionary but the back-end storage is memcache servers.
 
 The low level :py:class:`~memcached2.Memcache` class is complete and
 documented, see :ref:`Memcache Examples <memcache-examples>` for examples
@@ -26,7 +26,7 @@ Documentation Index
 .. toctree::
    :maxdepth: 2
 
-   obliviousmappingclass
+   exceptionsaremissesmappingclass
    hasherclass
    selectorclass
    memcachevalueclass
