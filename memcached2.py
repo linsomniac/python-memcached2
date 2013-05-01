@@ -42,6 +42,11 @@ PY3 = sys.version > '3'
 if not PY3:
     ConnectionResetError = socket.error
 
+    class BrokenPipeError(Exception):
+        '''INTERNAL: Python 2 does not define this exception, so we
+        create one of our own.'''
+        pass
+
 
 def _from_bytes(data):
     '''INTERNAL: Convert bytes to a regular string.'''
@@ -69,11 +74,6 @@ def _to_bool(s):
         return True
     raise NotImplementedError('Unknown boolean value {0}'
             .format(repr(s)))
-
-
-if not PY3:
-    #@@@
-    BrokenPipeError = NotImplementedError
 
 
 class MemcachedException(Exception):
