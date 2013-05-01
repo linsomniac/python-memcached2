@@ -7,6 +7,12 @@ well.
 
 **I am looking for feedback on this module, its design and architecture.**
 
+**2013-05-01**: I'm tagging a 0.2 but still not going to release to pypi
+yet.  Server failure testing, related to ExceptionsAreMissesMapping, have
+located several exceptions that weren't being caught and translated into
+local module exceptions.  Current functionality is solid, but I want to
+add a MemcacheCASValue class, which is kind of an API change.
+
 **2013-04-27**: The module is usable, but if you do you
 should expect that the interfaces may change.  The high level
 :py:class:`~memcached2.ExceptionsAreMissesMapping code is usable but
