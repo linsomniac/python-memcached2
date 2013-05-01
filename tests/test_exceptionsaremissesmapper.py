@@ -27,6 +27,7 @@ import sys
 sys.path.insert(0, '..')
 import mctestsupp
 import memcached2
+from mctestsupp import RECEIVE, CommandServer
 
 
 class test_ServerConnection(unittest.TestCase):
@@ -54,5 +55,12 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(dic.get('foo'), None)
         dic['zot'] = 'a'
         len(dic)
+
+    def test_SetServerDisconnect(self):
+        server = CommandServer([])
+        mcd = memcached2.ExceptionsAreMissesMapping((
+            'memcached://localhost:{0}/'.format(server.port),))
+        mcd['foo'] = 'bar'
+
 
 unittest.main()

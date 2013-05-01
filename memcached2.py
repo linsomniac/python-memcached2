@@ -161,7 +161,10 @@ class ExceptionsAreMissesMapping(collections.MutableMapping):
             raise KeyError(key)
 
     def __setitem__(self, key, value):
-        self.memcache.set(key, value)
+        try:
+            self.memcache.set(key, value)
+        except (ServerDisconnect,):
+            pass
 
     def __delitem__(self, key):
         try:
