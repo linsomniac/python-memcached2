@@ -1,3 +1,5 @@
+Create MemcacheCASValue
+Create ExceptionAreMissesMemcache
 Performance test the new versus old memcache modules.
 Make another wrapper class that catches exceptions.
 Post socket server for unit test to let others know about it.
