@@ -71,6 +71,11 @@ def _to_bool(s):
             .format(repr(s)))
 
 
+if not PY3:
+    #@@@
+    BrokenPipeError = NotImplementedError
+
+
 class MemcachedException(Exception):
     '''Base exception that all other exceptions inherit from.
     This is never raised directly.'''
@@ -157,20 +162,20 @@ class ExceptionsAreMissesMapping(collections.MutableMapping):
     def __getitem__(self, key):
         try:
             return self.memcache.get(key)
-        except NoValue:
+        except (NoValue, ServerDisconnect, NotStored, NotFound, CASFailure):
             raise KeyError(key)
 
     def __setitem__(self, key, value):
         try:
             self.memcache.set(key, value)
-        except (ServerDisconnect,):
+        except (ServerDisconnect, NotStored, NotFound, CASFailure):
             pass
 
     def __delitem__(self, key):
         try:
             self.memcache.delete(key)
             return True
-        except NotFound:
+        except (ServerDisconnect, NoAvailableServers, NotFound):
             return False
 
     def __iter__(self):
@@ -178,8 +183,12 @@ class ExceptionsAreMissesMapping(collections.MutableMapping):
 
     def __len__(self):
         items = 0
-        for server_stats in self.memcache.stats():
-            items += server_stats.get('curr_items', 0)
+        try:
+            for server_stats in self.memcache.stats():
+                items += server_stats.get('curr_items', 0)
+        except (ServerDisconnect, NoAvailableServers):
+            pass
+
         return items
 
 
@@ -432,11 +441,19 @@ class Memcache:
         :type key: str
         :returns: :py:class:`~memcached2.ServerConnection` -- The server object
             that the command was sent to.
-        :raises: :py:exc:`~memcached2.NoAvailableServers`
+        :raises: :py:exc:`~memcached2.NoAvailableServers`,
+            :py:exc:`~memcached2.ServerDisconnect`
         '''
         command = _to_bytes(command)
         server = self.selector.select(self.servers, self.hasher.hash(key))
-        server.send_command(command)
+
+        try:
+            server.send_command(command)
+        except ConnectionResetError:
+            raise ServerDisconnect('ConnectionResetError')
+        except BrokenPipeError:
+            raise ServerDisconnect('BrokenPipeError')
+
         return server
 
     def get(self, key, get_cas=False):
@@ -592,6 +609,7 @@ class Memcache:
         command = 'delete {0}\r\n'.format(key)
 
         server = self._send_command(command, key)
+
         data = server.read_until('\r\n')
 
         if data == 'DELETED\r\n':
@@ -1144,9 +1162,16 @@ class ServerConnection:
             to a `bytes` type with ASCII encoding if necessary for sending
             across the socket.
         :type command: str
+
+        :raises: :py:exc:`~memcached2.ServerDisconnect`
         '''
 
-        self.backend.send(_to_bytes(command))
+        try:
+            self.backend.send(_to_bytes(command))
+        except ConnectionResetError:
+            raise ServerDisconnect('ConnectionResetError')
+        except BrokenPipeError:
+            raise ServerDisconnect('BrokenPipeError')
 
     def read_until(self, search):
         '''Read data from the server until "search" is found.
@@ -1176,7 +1201,9 @@ class ServerConnection:
             try:
                 data = _from_bytes(self.backend.recv(self.buffer_readsize))
             except ConnectionResetError:
-                raise ServerDisconnect('During recv() in read_until()')
+                raise ServerDisconnect('ConnectionResetError')
+            except BrokenPipeError:
+                raise ServerDisconnect('BrokenPipeError')
             if not data:
                 raise ServerDisconnect('Zero-length read in read_until()')
             self.buffer += data
