@@ -47,6 +47,25 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(result.flags, 0)
         memcache.close()
 
+    def test_GetAndMemcacheValue(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+
+        memcache.set('foo', 'bar')
+        result = memcache.get('foo')
+        self.assertEqual(result, 'bar')
+        result.set('testing')
+        self.assertEqual(memcache.get('foo'), 'testing')
+
+        result = memcache.get('foo', get_cas=True)
+        self.assertEqual(result, 'testing')
+        result.set('test2')
+        self.assertEqual(memcache.get('foo'), 'test2')
+        with self.assertRaises(memcached2.CASFailure):
+            result.set('test3')
+        self.assertEqual(memcache.get('foo'), 'test2')
+
+        memcache.close()
+
     def test_SetAndGetWithErrors(self):
         server = CommandServer([])
         memcache = memcached2.Memcache(('memcached://localhost:{0}/'

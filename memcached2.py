@@ -199,9 +199,14 @@ class MemcacheValue(str):
     server.  However, it is augmented with additional attributes representing
     additional data received from the server: `flags`, `key`, and
     `cas_unique` (which may be None if it was not requested from the server).
+
+    If this is constructed with the `memcache`
+    :py:class:`~memcache2.ServerConnection` instance, then additional
+    methods may be used to update the value via this object.  If `cas_unique`
+    is given, these updates are done using the CAS value.
     '''
 
-    def __new__(self, value, key, flags, cas_unique=None):
+    def __new__(self, value, key, flags, cas_unique=None, memcache=None):
         '''Instantiate new instance.
 
         :param value: The memcache `value`, which is the value of this
@@ -214,14 +219,39 @@ class MemcacheValue(str):
         :param cas_unique: The `cas_unique` value, if it was queried, or
             None if no CAS information was retrieved.
         :type cas_unique: int
+        :param memcache: The memcache server instance, used for future
+            operations on this key.
+        :type memcache: :py:class:`~memcache2.ServerConnection`
         :returns: :py:class:`~memcached2.MemcacheValue` instance
         '''
         data = super(MemcacheValue, self).__new__(self, value)
         data.key = key
         data.flags = flags
         data.cas_unique = cas_unique
+        data.memcache = memcache
 
         return data
+
+    def set(self, value, flags=0, exptime=0):
+        '''Update the value in the server.
+
+        The key that was used to retrieve this value is updated in the server.
+        If the value was retrieved from the server with `get_cas` enabled,
+        then this will update using the CAS.
+
+        See :py:method:`~memcache2.Memcache.set` for more information.
+
+        .. note::
+
+            This does not update this object's value.
+
+        .. note::
+
+            If this object was retrieved with `get_cas` set, then multiple
+            updates will trigger a :py:exception:`~memcache2.CASFailure`.
+        '''
+        return self.memcache.set(self.key, value, flags=flags, exptime=exptime,
+                cas_unique=self.cas_unique)
 
 
 class HasherBase:
@@ -503,7 +533,7 @@ class Memcache:
             raise NotImplementedError(
                     'Unknown response: {0}'.format(repr(data)))
 
-        return MemcacheValue(body, key, flags, cas_unique)
+        return MemcacheValue(body, key, flags, cas_unique, memcache=self)
 
     def set(self, key, value, flags=0, exptime=0, cas_unique=None):
         '''Set a key to the value in the memcache server.
