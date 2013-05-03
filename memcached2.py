@@ -261,7 +261,11 @@ class MemcacheValue(str):
         .. note::
 
             This does not update this object's value.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique != None:
+            raise CASFailure('Not supported with CAS')
         return self.memcache.append(self.key, value)
 
     def prepend(self, value):
@@ -272,7 +276,11 @@ class MemcacheValue(str):
         .. note::
 
             This does not update this object's value.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique != None:
+            raise CASFailure('Not supported with CAS')
         return self.memcache.prepend(self.key, value)
 
     def incr(self, value=1):
@@ -283,7 +291,11 @@ class MemcacheValue(str):
         .. note::
 
             This does not update this object's value.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique != None:
+            raise CASFailure('Not supported with CAS')
         return self.memcache.incr(self.key, value)
 
     def decr(self, value=1):
@@ -294,21 +306,33 @@ class MemcacheValue(str):
         .. note::
 
             This does not update this object's value.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique != None:
+            raise CASFailure('Not supported with CAS')
         return self.memcache.decr(self.key, value)
 
     def delete(self):
         '''Remove this key from the server.
 
         See :py:method:`~memcache2.Memcache.delete` for more information.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique != None:
+            raise CASFailure('Not supported with CAS')
         return self.memcache.delete(self.key)
 
     def touch(self, exptime):
         '''Update the expiration time on an item.
 
         See :py:method:`~memcache2.Memcache.touch` for more information.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique != None:
+            raise CASFailure('Not supported with CAS')
         return self.memcache.touch(self.key, exptime)
 
 
