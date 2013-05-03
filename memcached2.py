@@ -253,6 +253,64 @@ class MemcacheValue(str):
         return self.memcache.set(self.key, value, flags=flags, exptime=exptime,
                 cas_unique=self.cas_unique)
 
+    def append(self, value):
+        '''Append `value` to the data stored for this key.
+
+        See :py:method:`~memcache2.Memcache.append` for more information.
+
+        .. note::
+
+            This does not update this object's value.
+        '''
+        return self.memcache.append(self.key, value)
+
+    def prepend(self, value):
+        '''Prepend `value` to the data stored for this key.
+
+        See :py:method:`~memcache2.Memcache.prepend` for more information.
+
+        .. note::
+
+            This does not update this object's value.
+        '''
+        return self.memcache.prepend(self.key, value)
+
+    def incr(self, value=1):
+        '''Increment the value for this key.
+
+        See :py:method:`~memcache2.Memcache.incr` for more information.
+
+        .. note::
+
+            This does not update this object's value.
+        '''
+        return self.memcache.incr(self.key, value)
+
+    def decr(self, value=1):
+        '''Decrement the value for this key.
+
+        See :py:method:`~memcache2.Memcache.decr` for more information.
+
+        .. note::
+
+            This does not update this object's value.
+        '''
+        return self.memcache.decr(self.key, value)
+
+    def delete(self):
+        '''Remove this key from the server.
+
+        See :py:method:`~memcache2.Memcache.delete` for more information.
+        '''
+        return self.memcache.delete(self.key)
+
+    def touch(self, exptime):
+        '''Update the expiration time on an item.
+
+        See :py:method:`~memcache2.Memcache.touch` for more information.
+        '''
+        return self.memcache.touch(self.key, exptime)
+
 
 class HasherBase:
     '''Turn memcache keys into hashes, for use in server selection.
@@ -983,13 +1041,13 @@ class Memcache:
 
         return self._run_multi_server(query)
 
-    def incr(self, key, value):
+    def incr(self, key, value=1):
         '''Increment the value for the key, treated as a 64-bit unsigned value.
 
         :param key: Key used to store value in memcache server and hashed to
             determine which server is used.
         :type key: str
-        :param value: A numeric value to add to the existing value.
+        :param value: A numeric value (default=1) to add to the existing value.
         :type value: int (64 bit)
         :returns: int -- (64 bits) The new value after the increment.
         :raises: :py:exc:`~memcached2.NotFound`,
@@ -998,13 +1056,13 @@ class Memcache:
         command = 'incr {0} {1}\r\n'.format(key, value)
         return self._incrdecr_command(command, key)
 
-    def decr(self, key, value):
+    def decr(self, key, value=1):
         '''Decrement the value for the key, treated as a 64-bit unsigned value.
 
         :param key: Key used to store value in memcache server and hashed to
             determine which server is used.
         :type key: str
-        :param value: A numeric value to add to the existing value.
+        :param value: A numeric value (default=1) to add to the existing value.
         :type value: int (64 bit)
         :returns: int -- (64 bits) The new value after the decrement.
         :raises: :py:exc:`~memcached2.NotFound`,

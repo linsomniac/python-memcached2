@@ -28,6 +28,7 @@ sys.path.insert(0, '..')
 import mctestsupp
 from mctestsupp import RECEIVE, CommandServer
 import memcached2
+import time
 
 
 class test_ServerConnection(unittest.TestCase):
@@ -47,7 +48,7 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(result.flags, 0)
         memcache.close()
 
-    def test_GetAndMemcacheValue(self):
+    def test_MemcacheValue(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
 
         memcache.set('foo', 'bar')
@@ -63,6 +64,36 @@ class test_ServerConnection(unittest.TestCase):
         with self.assertRaises(memcached2.CASFailure):
             result.set('test3')
         self.assertEqual(memcache.get('foo'), 'test2')
+
+        result = memcache.get('foo')
+        result.append('>>>')
+        result.prepend('<<<')
+        self.assertEqual(memcache.get('foo'), '<<<test2>>>')
+        result.delete()
+        with self.assertRaises(memcached2.NoValue):
+            memcache.get('foo')
+
+        memcache.set('foo', '1')
+        result = memcache.get('foo')
+        self.assertEqual(result, '1')
+        result.incr()
+        self.assertEqual(memcache.get('foo'), '2')
+        result.incr(5)
+        self.assertEqual(memcache.get('foo'), '7')
+        result.decr()
+        self.assertEqual(memcache.get('foo'), '6')
+        result.decr(3)
+        self.assertEqual(memcache.get('foo'), '3')
+
+        memcache.set('foo', '1', exptime=1)
+        result = memcache.get('foo')
+        result.touch(10)
+        time.sleep(2)
+        self.assertEqual(memcache.get('foo'), '1')
+        result.touch(1)
+        time.sleep(2)
+        with self.assertRaises(memcached2.NoValue):
+            memcache.get('foo')
 
         memcache.close()
 
