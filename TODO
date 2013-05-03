@@ -1,5 +1,7 @@
 Create MemcacheCASValue
 Make MemcacheValue and MemcacheCASValue support incr, set, casset...?
+Should a MemcacheValue CAS update cause a refresh of the CAS value?
+      Do we return the CAS value from the set() operation?
 Create ExceptionAreMissesMemcache
 Performance test the new versus old memcache modules.
 Make another wrapper class that catches exceptions.
