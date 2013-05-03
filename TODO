@@ -16,3 +16,4 @@ Do we want to use flags for pickling/compression indication, or allow
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
       How will that work, considering they could hash to multiple servers?
       Collect the ones that go to the same server and send them as groups?
+Make a old memcache compatible interface (to the extent possible)?
