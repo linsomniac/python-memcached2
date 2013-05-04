@@ -1,3 +1,4 @@
+Memcache probably should not return MemcacheValue, maybe a subclass?
 Document MemcacheValue additions.
 Create MemcacheCASValue
 Make MemcacheValue and MemcacheCASValue support incr, set, casset...?
