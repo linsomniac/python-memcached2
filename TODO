@@ -1,4 +1,5 @@
 Document MemcacheValue additions.
+DELETE can take a "time" argument?
 Create MemcacheCASValue
 Make MemcacheValue and MemcacheCASValue support incr, set, casset...?
 Should a MemcacheValue CAS update cause a refresh of the CAS value?
