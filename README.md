@@ -103,12 +103,17 @@ in the software.
 Background
 ----------
 
-I've been wanting to rewrite the Python memcached module for a while and
-have finally started.  The original python-memcached code was written by
-someone not very familiar with Python.  I've since been maintaining it felt
-like starting over would help with getting both the Python 3 support and
-just cleaning up the code over all.
+The existing python-memcached module has a long history, but also is a very
+complicated set of code that I did not write and has very few tests.  It
+was written long long ago, and so I've felt that there was a benefit both
+to starting over from a clean slate, using lessons learned, and to using
+more modern software-development practices.  Plus, it's a good opportunity
+for supporting Python 3 and Python 2 (though there is a Python 3 patch for
+python-memcached).
 
-I've been maintaining it for years, but currently a lot of people are
-using it in production and so i can't really change the API.  I'd like
-to just start from a clean slate and see where it goes.
+The current code is deployed widely, so doing extensive changes to it is
+fraught with peril.
+
+So in early April I began experimenting with a new code-base for
+python-memcached.  I've been exploring a few different things to see where
+they go, and so far I think it looks promising.
