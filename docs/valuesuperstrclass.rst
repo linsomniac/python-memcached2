@@ -1,4 +1,4 @@
 String-like Memcache Value Object
 *********************************
 
-.. autoclass:: memcached2.ValueMemcache
+.. autoclass:: memcached2.ValueSuperStr

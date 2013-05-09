@@ -26,10 +26,11 @@ Documentation Index
 .. toctree::
    :maxdepth: 2
 
+   whatsnew
    exceptionsaremissesmappingclass
    hasherclass
    selectorclass
-   valuememcacheclass
+   valuesuperstrclass
    valuedictionaryclass
    memcacheclass
    serverconnectionclass

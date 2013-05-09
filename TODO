@@ -1,4 +1,3 @@
-Reference "WHATSNEW" from the docs?
 Post socket server for unit test to let others know about it.
 Should a ValueSuperStr CAS update cause a refresh of the CAS value?
       Do we return the CAS value from the set() operation?
