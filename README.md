@@ -7,26 +7,12 @@ well.
 
 **I am looking for feedback on this module, its design and architecture.**
 
-**2013-05-03**: I did a short performance test against the python-memcached
-library that this is meant to replace.  This new module is around 10%
-faster (using the Memcache() class) at retrieving 10 byte values, and 16%
-faster at 1KB values.  I was expecting more, but I also haven't done any
-performance tuning.  If I just return normal strings instead of
-ValueMemcache, that goes up to 23% faster, so that may be a point of
-optimization.
+**2013-05-08**: MemcacheValue is now called ValueSuperStr, and it is no
+longer the default return type in Memcache().  It can be defined by passing
+ValueMemcache to Memcache() as the "value_wrapper".  There's also a
+ValueDictionary now.
 
-**2013-05-01**: I'm tagging a 0.2 but still not going to release to pypi
-yet.  Server failure testing, related to ExceptionsAreMissesMapping, have
-located several exceptions that weren't being caught and translated into
-local module exceptions.  Current functionality is solid, but I want to
-add a MemcacheCASValue class, which is kind of an API change.
-
-**2013-04-27**: The module is usable, but if you do you
-should expect that the interfaces may change.  The high level
-:py:class:`~memcached2.ExceptionsAreMissesMapping code is usable but
-not fully tested and the exceptions aren't all caught.  The low-level
-:py:class:`~memcached2.Memcache` code is basically complete, documented,
-and well tested.
+These "What's new" dated entries are now recorded in the "WHATSNEW" file.
 
 Example
 -------
