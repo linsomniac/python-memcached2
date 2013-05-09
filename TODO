@@ -1,9 +1,8 @@
+Post socket server for unit test to let others know about it.
 Better name for ValueMemcache?
 Should a ValueMemcache CAS update cause a refresh of the CAS value?
       Do we return the CAS value from the set() operation?
 Create ExceptionAreMissesMemcache
-Make another wrapper class that catches exceptions.
-Post socket server for unit test to let others know about it.
 Decide on what to do about automatic pickling.
 Convert test_serverconnection.py from class FakeMemcacheServer
       to CommandServer where appropriate.
