@@ -192,7 +192,7 @@ class ExceptionsAreMissesMapping(collections.MutableMapping):
         return items
 
 
-class ValueMemcache(str):
+class ValueSuperStr(str):
     '''Wrapper around Memcache value results.
 
     This acts as a string normally, containing the value read from the
@@ -222,9 +222,9 @@ class ValueMemcache(str):
         :param memcache: The memcache server instance, used for future
             operations on this key.
         :type memcache: :py:class:`~memcache2.ServerConnection`
-        :returns: :py:class:`~memcached2.ValueMemcache` instance
+        :returns: :py:class:`~memcached2.ValueSuperStr` instance
         '''
-        data = super(ValueMemcache, self).__new__(self, value)
+        data = super(ValueSuperStr, self).__new__(self, value)
         data.key = key
         data.flags = flags
         data.cas_unique = cas_unique
@@ -361,7 +361,7 @@ class ValueDictionary(dict):
         :param memcache: The memcache server instance, used for future
             operations on this key.
         :type memcache: :py:class:`~memcache2.ServerConnection`
-        :returns: :py:class:`~memcached2.ValueMemcache` instance
+        :returns: :py:class:`~memcached2.ValueSuperStr` instance
         '''
         return super(ValueDictionary, self).__init__([
                 ['key', key],
@@ -559,7 +559,7 @@ class Memcache:
         :type hasher: "Hash" class object.
         :param value_wrapper: (None) A "Value" class.  This causes values
             returned to be wrapped in the passed class before being returned.
-            For example :py:class:`~memcache2.ValueMemcache` implements many
+            For example :py:class:`~memcache2.ValueSuperStr` implements many
             useful additions to the string return.
         :type value_wrapper: "Value" class object.
         '''
@@ -619,7 +619,7 @@ class Memcache:
             object has the "cas_unique" attribute set.
         :type get_cas: bool
         :returns: String, or "value_wrapper" as specified during object
-            creation such as `~memcached2.ValueMemcache`.
+            creation such as `~memcached2.ValueSuperStr`.
         :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`,
             :py:exc:`~memcached2.NoAvailableServers`
         '''

@@ -37,7 +37,7 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_SetAndGet(self):
         memcache = memcached2.Memcache(('memcached://localhost/',),
-                value_wrapper=memcached2.ValueMemcache)
+                value_wrapper=memcached2.ValueSuperStr)
 
         with self.assertRaises(memcached2.NoValue):
             result = memcache.get('foo')
@@ -49,9 +49,9 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(result.flags, 0)
         memcache.close()
 
-    def test_ValueMemcache(self):
+    def test_ValueSuperStr(self):
         memcache = memcached2.Memcache(('memcached://localhost/',),
-                value_wrapper=memcached2.ValueMemcache)
+                value_wrapper=memcached2.ValueSuperStr)
 
         memcache.set('foo', 'bar')
         result = memcache.get('foo')
@@ -160,7 +160,7 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_TestFlagsAndExptime(self):
         memcache = memcached2.Memcache(('memcached://localhost/',),
-                value_wrapper=memcached2.ValueMemcache)
+                value_wrapper=memcached2.ValueSuperStr)
 
         memcache.set('foo', 'xXx', flags=12, exptime=1)
         result = memcache.get('foo')
@@ -203,7 +203,7 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_Cas(self):
         memcache = memcached2.Memcache(('memcached://localhost/',),
-                value_wrapper=memcached2.ValueMemcache)
+                value_wrapper=memcached2.ValueSuperStr)
         memcache.set('foo', 'bar')
         result = memcache.get('foo', get_cas=True)
 
