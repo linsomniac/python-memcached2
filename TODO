@@ -1,4 +1,3 @@
-Make it so that Value wrapper can merge get_multi results?
 Better name for ValueMemcache?
 Should a ValueMemcache CAS update cause a refresh of the CAS value?
       Do we return the CAS value from the set() operation?
@@ -14,4 +13,5 @@ Do we want to use flags for pickling/compression indication, or allow
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
       How will that work, considering they could hash to multiple servers?
       Collect the ones that go to the same server and send them as groups?
+Make it so that Value wrapper can merge get_multi results?
 Make a old memcache compatible interface (to the extent possible)?
