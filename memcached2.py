@@ -192,7 +192,7 @@ class ExceptionsAreMissesMapping(collections.MutableMapping):
         return items
 
 
-class MemcacheValue(str):
+class ValueMemcache(str):
     '''Wrapper around Memcache value results.
 
     This acts as a string normally, containing the value read from the
@@ -222,9 +222,9 @@ class MemcacheValue(str):
         :param memcache: The memcache server instance, used for future
             operations on this key.
         :type memcache: :py:class:`~memcache2.ServerConnection`
-        :returns: :py:class:`~memcached2.MemcacheValue` instance
+        :returns: :py:class:`~memcached2.ValueMemcache` instance
         '''
-        data = super(MemcacheValue, self).__new__(self, value)
+        data = super(ValueMemcache, self).__new__(self, value)
         data.key = key
         data.flags = flags
         data.cas_unique = cas_unique
@@ -503,7 +503,8 @@ class Memcache:
 
     '''
 
-    def __init__(self, servers, selector=None, hasher=None):
+    def __init__(self, servers, selector=None, hasher=None,
+            value_wrapper=None):
         '''
         :param servers: One or more server URIs of the form:
             "memcache://hostname[:port]/"
@@ -521,11 +522,17 @@ class Memcache:
             one server specified, or :py:class:`~memcache2.HasherCMemcache`
             otherwise.
         :type hasher: "Hash" class object.
+        :param value_wrapper: (None) A "Value" class.  This causes values
+            returned to be wrapped in the passed class before being returned.
+            For example :py:class:`~memcache2.ValueMemcache` implements many
+            useful additions to the string return.
+        :type value_wrapper: "Value" class object.
         '''
 
         self.servers = [ServerConnection(x) for x in servers]
 
         self.hasher = hasher
+        self.value_wrapper = value_wrapper
 
         if selector != None:
             self.selector = selector
@@ -576,9 +583,8 @@ class Memcache:
         :param get_cas: If True, the "cas unique" is queried and the return
             object has the "cas_unique" attribute set.
         :type get_cas: bool
-        :returns: :py:class:`~memcached2.MemcacheValue` -- The value read from
-            the server, which includes attributes specifying the key and
-            flags, otherwise it acts like a string.
+        :returns: String, or "value_wrapper" as specified during object
+            creation such as `~memcached2.ValueMemcache`.
         :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`,
             :py:exc:`~memcached2.NoAvailableServers`
         '''
@@ -615,7 +621,10 @@ class Memcache:
             raise NotImplementedError(
                     'Unknown response: {0}'.format(repr(data)))
 
-        return MemcacheValue(body, key, flags, cas_unique, memcache=self)
+        if self.value_wrapper:
+            return self.value_wrapper(body, key, flags, cas_unique,
+                    memcache=self)
+        return body
 
     def set(self, key, value, flags=0, exptime=0, cas_unique=None):
         '''Set a key to the value in the memcache server.

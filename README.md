@@ -12,7 +12,7 @@ library that this is meant to replace.  This new module is around 10%
 faster (using the Memcache() class) at retrieving 10 byte values, and 16%
 faster at 1KB values.  I was expecting more, but I also haven't done any
 performance tuning.  If I just return normal strings instead of
-MemcacheValues, that goes up to 23% faster, so that may be a point of
+ValueMemcache, that goes up to 23% faster, so that may be a point of
 optimization.
 
 **2013-05-01**: I'm tagging a 0.2 but still not going to release to pypi

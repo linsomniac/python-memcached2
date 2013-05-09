@@ -30,7 +30,7 @@ Cached value not available, need to recompute it
 
 Demonstrating :py:func:`~memcached2.Memcache.set`,
 :py:func:`~memcached2.Memcache.get` and
-:py:class:`~memcached2.MemcacheValue`:
+:py:class:`~memcached2.ValueMemcache`:
 
 >>> memcache.set('session_id', 'TEST SESSSION DATA')
 >>> result = memcache.get('session_id')

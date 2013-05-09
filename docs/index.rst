@@ -29,7 +29,7 @@ Documentation Index
    exceptionsaremissesmappingclass
    hasherclass
    selectorclass
-   memcachevalueclass
+   valuememcacheclass
    memcacheclass
    serverconnectionclass
    exceptions
