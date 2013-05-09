@@ -1,4 +1,4 @@
-Make ValueDictionary class?
+Make it so that Value wrapper can merge get_multi results?
 Better name for ValueMemcache?
 Should a ValueMemcache CAS update cause a refresh of the CAS value?
       Do we return the CAS value from the set() operation?

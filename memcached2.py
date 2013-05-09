@@ -336,6 +336,41 @@ class ValueMemcache(str):
         return self.memcache.touch(self.key, exptime)
 
 
+class ValueDictionary(dict):
+    '''Encode the response as a dictionary.
+
+    This is a simple dictionary of the result data from the memcache
+    server, including keys: "key", "value", "flags", and "cas_unique".
+    This is a way of getting additional data from the memcache server
+    for use in things like CAS updates.
+    '''
+
+    def __init__(self, value, key, flags, cas_unique=None, memcache=None):
+        '''Instantiate new instance.
+
+        :param value: The memcache `value`, which is the value of this
+            class when treated like a string.
+        :type value: str
+        :param key: The `key` associated with the `value` retrieved.
+        :type key: str
+        :param flags: `flags` associated with the `value` retrieved.
+        :type flags: int
+        :param cas_unique: The `cas_unique` value, if it was queried, or
+            None if no CAS information was retrieved.
+        :type cas_unique: int
+        :param memcache: The memcache server instance, used for future
+            operations on this key.
+        :type memcache: :py:class:`~memcache2.ServerConnection`
+        :returns: :py:class:`~memcached2.ValueMemcache` instance
+        '''
+        return super(ValueDictionary, self).__init__([
+                ['key', key],
+                ['value', value],
+                ['flags', flags],
+                ['cas_unique', cas_unique]
+                ])
+
+
 class HasherBase:
     '''Turn memcache keys into hashes, for use in server selection.
 

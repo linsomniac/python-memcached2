@@ -99,6 +99,31 @@ class test_ServerConnection(unittest.TestCase):
 
         memcache.close()
 
+    def test_ValueDictionary(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',),
+                value_wrapper=memcached2.ValueDictionary)
+
+        memcache.set('foo', 'bar')
+        result = memcache.get('foo')
+        self.assertEqual(result.get('key'), 'foo')
+        self.assertEqual(result.get('value'), 'bar')
+        memcache.set(result.get('key'), 'testing')
+        self.assertEqual(memcache.get('foo')['value'], 'testing')
+
+        result = memcache.get('foo', get_cas=True)
+        self.assertEqual(result['key'], 'foo')
+        self.assertEqual(result['value'], 'testing')
+        self.assertNotIn(result['cas_unique'], [None, 0])
+        memcache.set(result.get('key'), 'test2',
+                cas_unique=result['cas_unique'])
+        self.assertEqual(memcache.get('foo')['value'], 'test2')
+        with self.assertRaises(memcached2.CASFailure):
+            memcache.set(result.get('key'), 'test3',
+                    cas_unique=result['cas_unique'])
+        self.assertEqual(memcache.get('foo')['value'], 'test2')
+
+        memcache.close()
+
     def test_SetAndGetWithErrors(self):
         server = CommandServer([])
         memcache = memcached2.Memcache(('memcached://localhost:{0}/'

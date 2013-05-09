@@ -30,6 +30,7 @@ Documentation Index
    hasherclass
    selectorclass
    valuememcacheclass
+   valuedictionaryclass
    memcacheclass
    serverconnectionclass
    exceptions
