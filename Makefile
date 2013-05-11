@@ -13,6 +13,7 @@
 # limitations under the License.
 
 check:
+	flake8 --ignore=E126 tests/*.py memcached2.py
 	pep8 --show-source tests/*.py memcached2.py
 	bash -c 'cd tests && exec make'
 	@make clean

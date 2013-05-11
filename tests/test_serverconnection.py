@@ -72,8 +72,8 @@ class test_ServerConnection(unittest.TestCase):
                 #conn.send('OK\n')
 
         server = DisconnetAfterCommandServer()
-        sc = memcached2.ServerConnection('memcached://127.0.0.1:{0}/'
-                .format(server.port))
+        sc = memcached2.ServerConnection(
+                'memcached://127.0.0.1:{0}/'.format(server.port))
         sc.connect()
         sc.send_command('flush_all\r\n')
         with self.assertRaises(memcached2.ServerDisconnect):
@@ -85,8 +85,8 @@ class test_ServerConnection(unittest.TestCase):
                 conn.close()
 
         server = ImmediatelyDisconnectServer()
-        sc = memcached2.ServerConnection('memcached://127.0.0.1:{0}/'
-                .format(server.port))
+        sc = memcached2.ServerConnection(
+                'memcached://127.0.0.1:{0}/'.format(server.port))
         sc.connect()
         sc.send_command('flush_all\r\n')
         with self.assertRaises(memcached2.ServerDisconnect):

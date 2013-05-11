@@ -30,6 +30,7 @@ sys.path.insert(0, '..')
 class test_Basic(unittest.TestCase):
     def test_ImportModule(self):
         import memcached2
+        memcached2
 
     def test_ConnectToLocalhostServer(self):
         import socket
