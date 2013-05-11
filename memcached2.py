@@ -72,8 +72,8 @@ def _to_bool(s):
         return False
     if s in ['1', 'yes']:
         return True
-    raise NotImplementedError('Unknown boolean value {0}'
-            .format(repr(s)))
+    raise NotImplementedError(
+            'Unknown boolean value {0}'.format(repr(s)))
 
 
 class MemcachedException(Exception):
@@ -250,7 +250,8 @@ class ValueSuperStr(str):
             If this object was retrieved with `get_cas` set, then multiple
             updates will trigger a :py:exception:`~memcache2.CASFailure`.
         '''
-        return self.memcache.set(self.key, value, flags=flags, exptime=exptime,
+        return self.memcache.set(
+                self.key, value, flags=flags, exptime=exptime,
                 cas_unique=self.cas_unique)
 
     def append(self, value):
@@ -264,7 +265,7 @@ class ValueSuperStr(str):
 
         :raises: :py:exc:`~memcached2.CASFailure`
         '''
-        if self.cas_unique != None:
+        if self.cas_unique is not None:
             raise CASFailure('Not supported with CAS')
         return self.memcache.append(self.key, value)
 
@@ -279,7 +280,7 @@ class ValueSuperStr(str):
 
         :raises: :py:exc:`~memcached2.CASFailure`
         '''
-        if self.cas_unique != None:
+        if self.cas_unique is not None:
             raise CASFailure('Not supported with CAS')
         return self.memcache.prepend(self.key, value)
 
@@ -294,7 +295,7 @@ class ValueSuperStr(str):
 
         :raises: :py:exc:`~memcached2.CASFailure`
         '''
-        if self.cas_unique != None:
+        if self.cas_unique is not None:
             raise CASFailure('Not supported with CAS')
         return self.memcache.incr(self.key, value)
 
@@ -309,7 +310,7 @@ class ValueSuperStr(str):
 
         :raises: :py:exc:`~memcached2.CASFailure`
         '''
-        if self.cas_unique != None:
+        if self.cas_unique is not None:
             raise CASFailure('Not supported with CAS')
         return self.memcache.decr(self.key, value)
 
@@ -320,7 +321,7 @@ class ValueSuperStr(str):
 
         :raises: :py:exc:`~memcached2.CASFailure`
         '''
-        if self.cas_unique != None:
+        if self.cas_unique is not None:
             raise CASFailure('Not supported with CAS')
         return self.memcache.delete(self.key)
 
@@ -331,7 +332,7 @@ class ValueSuperStr(str):
 
         :raises: :py:exc:`~memcached2.CASFailure`
         '''
-        if self.cas_unique != None:
+        if self.cas_unique is not None:
             raise CASFailure('Not supported with CAS')
         return self.memcache.touch(self.key, exptime)
 
@@ -363,11 +364,12 @@ class ValueDictionary(dict):
         :type memcache: :py:class:`~memcache2.ServerConnection`
         :returns: :py:class:`~memcached2.ValueSuperStr` instance
         '''
-        return super(ValueDictionary, self).__init__([
-                ['key', key],
-                ['value', value],
-                ['flags', flags],
-                ['cas_unique', cas_unique]
+        return super(ValueDictionary, self).__init__(
+                [
+                    ['key', key],
+                    ['value', value],
+                    ['flags', flags],
+                    ['cas_unique', cas_unique]
                 ])
 
 
@@ -526,7 +528,7 @@ class Memcache:
 
     Example:
 
-    >>> from memcached2 import *
+    >>> from memcached2 import *                               # noqa
     >>> mc = Memcache(['memcached://localhost:11211/'])
     >>> mc.set('foo', 'bar')
     >>> mc.get('foo')
@@ -538,8 +540,8 @@ class Memcache:
 
     '''
 
-    def __init__(self, servers, selector=None, hasher=None,
-            value_wrapper=None):
+    def __init__(
+            self, servers, selector=None, hasher=None, value_wrapper=None):
         '''
         :param servers: One or more server URIs of the form:
             "memcache://hostname[:port]/"
@@ -569,16 +571,16 @@ class Memcache:
         self.hasher = hasher
         self.value_wrapper = value_wrapper
 
-        if selector != None:
+        if selector is not None:
             self.selector = selector
         else:
             if len(self.servers) < 2:
                 self.selector = SelectorFirst()
-                if hasher == None:
+                if hasher is None:
                     self.hasher = HasherZero()
             else:
                 self.selector = SelectorAvailableServers()
-                if hasher == None:
+                if hasher is None:
                     self.hasher = HasherCMemcache()
 
     def __del__(self):
@@ -648,8 +650,9 @@ class Memcache:
 
         data = server.read_until('\r\n')   # trailing termination
         if data != '\r\n':
-            raise NotImplementedError('Unexpected response when looking for '
-                    'terminator: {0}'.format(data))
+            raise NotImplementedError(
+                    'Unexpected response when looking for terminator: {0}'
+                    .format(data))
 
         data = server.read_until('\r\n')
         if data != 'END\r\n':
@@ -657,8 +660,8 @@ class Memcache:
                     'Unknown response: {0}'.format(repr(data)))
 
         if self.value_wrapper:
-            return self.value_wrapper(body, key, flags, cas_unique,
-                    memcache=self)
+            return self.value_wrapper(
+                    body, key, flags, cas_unique, memcache=self)
         return body
 
     def set(self, key, value, flags=0, exptime=0, cas_unique=None):
@@ -682,11 +685,12 @@ class Memcache:
         :type cas_unique: int (64 bits)
         '''
         if cas_unique:
-            command = 'cas {0} {1} {2} {3} {4}\r\n'.format(key,
-                    flags, exptime, len(value), cas_unique) + value + '\r\n'
+            command = 'cas {0} {1} {2} {3} {4}\r\n'.format(
+                    key, flags, exptime, len(value),
+                    cas_unique) + value + '\r\n'
         else:
-            command = 'set {0} {1} {2} {3}\r\n'.format(key,
-                    flags, exptime, len(value)) + value + '\r\n'
+            command = 'set {0} {1} {2} {3}\r\n'.format(
+                    key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def add(self, key, value, flags=0, exptime=0):
@@ -704,8 +708,8 @@ class Memcache:
             seconds, for this value.
         :type exptime: int
         '''
-        command = 'add {0} {1} {2} {3}\r\n'.format(key,
-                flags, exptime, len(value)) + value + '\r\n'
+        command = 'add {0} {1} {2} {3}\r\n'.format(
+                key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def replace(self, key, value, flags=0, exptime=0):
@@ -723,8 +727,8 @@ class Memcache:
             seconds, for this value.
         :type exptime: int
         '''
-        command = 'replace {0} {1} {2} {3}\r\n'.format(key,
-                flags, exptime, len(value)) + value + '\r\n'
+        command = 'replace {0} {1} {2} {3}\r\n'.format(
+                key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def append(self, key, value):
@@ -736,8 +740,8 @@ class Memcache:
         :param value: Value stored in memcache server for this key.
         :type value: str
         '''
-        command = 'append {0} 0 0 {1}\r\n'.format(key,
-                len(value)) + value + '\r\n'
+        command = 'append {0} 0 0 {1}\r\n'.format(
+                key, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def prepend(self, key, value):
@@ -749,8 +753,8 @@ class Memcache:
         :param value: Value stored in memcache server for this key.
         :type value: str
         '''
-        command = 'prepend {0} 0 0 {1}\r\n'.format(key,
-                len(value)) + value + '\r\n'
+        command = 'prepend {0} 0 0 {1}\r\n'.format(
+                key, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def delete(self, key):
@@ -773,8 +777,8 @@ class Memcache:
         if data == 'NOT_FOUND\r\n':
             raise NotFound()
 
-        raise NotImplementedError('Unknown return data from server: "{0}"'
-                .format(repr(data)))
+        raise NotImplementedError(
+                'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def touch(self, key, exptime):
         '''Update the expiration time on an item.
@@ -799,8 +803,8 @@ class Memcache:
         if data == 'NOT_FOUND\r\n':
             raise NotFound()
 
-        raise NotImplementedError('Unknown return data from server: "{0}"'
-                .format(repr(data)))
+        raise NotImplementedError(
+                'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def _reconnect_all(self):
         '''INTERNAL: Attempt to connect to all backend servers.'''
@@ -884,22 +888,26 @@ class Memcache:
                     break
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
-                    raise NotImplementedError('Unknown stats data: {0}'
-                            .format(repr(data)))
-                if key in ['pid', 'uptime', 'time', 'pointer_size',
-                        'curr_items', 'total_items', 'bytes',
-                        'curr_connections', 'total_connections',
-                        'connection_structures', 'reserved_fds', 'cmd_get',
-                        'cmd_set', 'cmd_flush', 'cmd_hits', 'cmd_misses',
-                        'delete_misses', 'delete_hits', 'incr_misses',
-                        'incr_hits', 'decr_misses', 'decr_hits', 'cas_misses',
-                        'cas_hits', 'cas_badval', 'touch_hits',
-                        'touch_misses', 'auth_cmds', 'auth_errors',
-                        'evictions', 'reclaimed', 'bytes_read',
-                        'bytes_written', 'limit_maxbytes', 'threads',
-                        'conn_yields', 'hash_power_level', 'hash_bytes',
-                        'expired_unfetched', 'evicted_unfetched',
-                        'slabs_moved']:
+                    raise NotImplementedError(
+                            'Unknown stats data: {0}'.format(repr(data)))
+                if key in (
+                        [
+                            'pid', 'uptime', 'time', 'pointer_size',
+                            'curr_items', 'total_items', 'bytes',
+                            'curr_connections', 'total_connections',
+                            'connection_structures', 'reserved_fds',
+                            'cmd_get', 'cmd_set', 'cmd_flush',
+                            'cmd_hits', 'cmd_misses', 'delete_misses',
+                            'delete_hits', 'incr_misses', 'incr_hits',
+                            'decr_misses', 'decr_hits', 'cas_misses',
+                            'cas_hits', 'cas_badval', 'touch_hits',
+                            'touch_misses', 'auth_cmds', 'auth_errors',
+                            'evictions', 'reclaimed', 'bytes_read',
+                            'bytes_written', 'limit_maxbytes', 'threads',
+                            'conn_yields', 'hash_power_level', 'hash_bytes',
+                            'expired_unfetched', 'evicted_unfetched',
+                            'slabs_moved'
+                        ]):
                     value = int(value)
                 if key in ['rusage_user', 'rusage_system']:
                     value = float(value)
@@ -941,17 +949,21 @@ class Memcache:
                     break
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
-                    raise NotImplementedError('Unknown stats data: {0}'
-                            .format(repr(data)))
+                    raise NotImplementedError(
+                            'Unknown stats data: {0}'.format(repr(data)))
                 prefix, slab_key, stat_key = key.split(':')
                 if prefix != 'items':
-                    raise NotImplementedError('Unknown stats item: {0}'
-                            .format(repr(key)))
+                    raise NotImplementedError(
+                            'Unknown stats item: {0}'.format(repr(key)))
                 if not slab_key in stats:
                     stats[slab_key] = {}
-                if stat_key in ['number', 'age', 'evicted', 'evicted_nonzero',
-                        'evicted_time', 'outofmemory', 'tailrepairs',
-                        'reclaimed', 'expired_unfetched', 'evicted_unfetched']:
+                if stat_key in (
+                        [
+                            'number', 'age', 'evicted', 'evicted_nonzero',
+                            'evicted_time', 'outofmemory', 'tailrepairs',
+                            'reclaimed', 'expired_unfetched',
+                            'evicted_unfetched'
+                        ]):
                     value = int(value)
                 stats[slab_key][stat_key] = value
 
@@ -993,19 +1005,23 @@ class Memcache:
                     break
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
-                    raise NotImplementedError('Unknown stats data: {0}'
-                            .format(repr(data)))
+                    raise NotImplementedError(
+                            'Unknown stats data: {0}'.format(repr(data)))
 
                 if ':' in key:
                     slab_key, stat_key = key.split(':')
                     if not slab_key in stats['slabs']:
                         stats['slabs'][slab_key] = {}
-                    if stat_key in ['chunk_size', 'chunks_per_page',
-                            'total_pages', 'total_chunks', 'used_chunks',
-                            'free_chunks', 'free_chunks_end', 'mem_requested',
-                            'get_hits', 'cmd_set', 'delete_hits', 'incr_hits',
-                            'decr_hits', 'cas_hits', 'cas_badval',
-                            'touch_hits']:
+                    if stat_key in (
+                            [
+                                'chunk_size', 'chunks_per_page',
+                                'total_pages', 'total_chunks',
+                                'used_chunks', 'free_chunks',
+                                'free_chunks_end', 'mem_requested',
+                                'get_hits', 'cmd_set', 'delete_hits',
+                                'incr_hits', 'decr_hits', 'cas_hits',
+                                'cas_badval', 'touch_hits'
+                            ]):
                         value = int(value)
                     stats['slabs'][slab_key][stat_key] = value
                 else:
@@ -1047,17 +1063,24 @@ class Memcache:
                     break
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
-                    raise NotImplementedError('Unknown stats data: {0}'
-                            .format(repr(data)))
-                if key in ['maxbytes', 'maxconns', 'tcpport', 'udpport',
-                        'verbosity', 'oldest', 'umask', 'chunk_size',
-                        'num_threads', 'num_threads_per_udp', 'reqs_per_event',
-                        'tcp_backlog', 'item_size_max', 'hashpower_init']:
+                    raise NotImplementedError(
+                            'Unknown stats data: {0}'.format(repr(data)))
+                if key in (
+                        [
+                            'maxbytes', 'maxconns', 'tcpport', 'udpport',
+                            'verbosity', 'oldest', 'umask', 'chunk_size',
+                            'num_threads', 'num_threads_per_udp',
+                            'reqs_per_event', 'tcp_backlog',
+                            'item_size_max', 'hashpower_init'
+                        ]):
                     value = int(value)
                 if key in ['growth_factor']:
                     value = float(value)
-                if key in ['maxconns_fast', 'slab_reassign', 'slab_automove',
-                        'detail_enabled', 'cas_enabled']:
+                if key in (
+                        [
+                            'maxconns_fast', 'slab_reassign',
+                            'slab_automove', 'detail_enabled', 'cas_enabled'
+                        ]):
                     value = _to_bool(value)
                 stats[key] = value
 
@@ -1101,8 +1124,8 @@ class Memcache:
                     break
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
-                    raise NotImplementedError('Unknown stats data: {0}'
-                            .format(repr(data)))
+                    raise NotImplementedError(
+                            'Unknown stats data: {0}'.format(repr(data)))
                 stats.append((int(key), int(value)))
 
             return stats
@@ -1160,13 +1183,14 @@ class Memcache:
             return int(data.strip())
         if data == 'NOT_FOUND\r\n':
             raise NotFound()
-        client_error = ('CLIENT_ERROR cannot increment or decrement '
+        client_error = (
+                'CLIENT_ERROR cannot increment or decrement '
                 'non-numeric value\r\n')
         if data == client_error:
             raise NonNumeric()
 
-        raise NotImplementedError('Unknown return data from server: "{0}"'
-                .format(repr(data)))
+        raise NotImplementedError(
+                'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def _storage_command(self, command, key):
         '''INTERNAL: Send storage command to server and parse results.
@@ -1195,8 +1219,8 @@ class Memcache:
         if data == 'NOT FOUND\r\n':
             raise NotFound()
 
-        raise NotImplementedError('Unknown return data from server: "{0}"'
-                .format(repr(data)))
+        raise NotImplementedError(
+                'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def close(self):
         '''Close the connection to all the backend servers.
@@ -1276,7 +1300,8 @@ class ServerConnection:
         :raises: :py:exc:`~memcached2.InvalidURI`
         '''
 
-        m = re.match(r'memcached://(?P<host>[^:]+)(:(?P<port>[0-9]+))?/',
+        m = re.match(
+                r'memcached://(?P<host>[^:]+)(:(?P<port>[0-9]+))?/',
                 self.uri)
         if m:
             group = m.groupdict()
@@ -1304,11 +1329,12 @@ class ServerConnection:
         self.reset()
         if self.parsed_uri['protocol'] == 'memcached':
             self.backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.backend.connect((self.parsed_uri['host'],
-                    self.parsed_uri['port']))
+            self.backend.connect(
+                    (self.parsed_uri['host'], self.parsed_uri['port']))
             return
 
-        raise UnknownProtocol('Unknown connection protocol: {0}'
+        raise UnknownProtocol(
+                'Unknown connection protocol: {0}'
                 .format(self.parsed_uri['protocol']))
 
     def send_command(self, command):
