@@ -1,5 +1,5 @@
 Should a ValueSuperStr CAS update cause a refresh of the CAS value?
-      Do we return the CAS value from the set() operation?
+      The memcache "CAS" operation doesn't return a new CAS value.
 Create ExceptionAreMissesMemcache
 Decide on what to do about automatic pickling.
 Convert test_serverconnection.py from class FakeMemcacheServer
