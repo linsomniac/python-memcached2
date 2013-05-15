@@ -26,6 +26,7 @@ import unittest
 import sys
 sys.path.insert(0, '..')
 import mctestsupp
+from mctestsupp import RECEIVE, CommandServer
 import memcached2
 
 
@@ -65,13 +66,7 @@ class test_ServerConnection(unittest.TestCase):
         sc.reset()
 
     def test_ServerFlushDisconnect(self):
-        class DisconnetAfterCommandServer(mctestsupp.FakeMemcacheServer):
-            def server(self, sock, conn, count):
-                conn.recv(100)
-                conn.close()
-                #conn.send('OK\n')
-
-        server = DisconnetAfterCommandServer()
+        server = CommandServer([RECEIVE])
         sc = memcached2.ServerConnection(
                 'memcached://127.0.0.1:{0}/'.format(server.port))
         sc.connect()
@@ -80,11 +75,7 @@ class test_ServerConnection(unittest.TestCase):
             self.assertEqual(sc.read_until('\r\n'), 'OK\r\n')
         sc.reset()
 
-        class ImmediatelyDisconnectServer(mctestsupp.FakeMemcacheServer):
-            def server(self, sock, conn, count):
-                conn.close()
-
-        server = ImmediatelyDisconnectServer()
+        server = CommandServer([])
         sc = memcached2.ServerConnection(
                 'memcached://127.0.0.1:{0}/'.format(server.port))
         sc.connect()
