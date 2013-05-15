@@ -1,5 +1,7 @@
-Should a ValueSuperStr CAS update cause a refresh of the CAS value?
-      The memcache "CAS" operation doesn't return a new CAS value.
+ValueSuperStr raise an exception if set() is called twice with a CAS.
+Make ValueSuperStr sub-class that does a re-get after set() if CAS
+      is set, and stores off the new CAS if the returned valu is the
+      same as what was set.
 Create ExceptionAreMissesMemcache
 Decide on what to do about automatic pickling.
 Do we want to use flags for pickling/compression indication, or allow
