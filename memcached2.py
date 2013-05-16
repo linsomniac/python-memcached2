@@ -116,8 +116,15 @@ class NotStored(StoreException):
 
 class CASFailure(StoreException):
     '''Item you are trying to store with a "cas" command has been modified
-    since you last fetched it (result=EXISTS)..  Subclass of
+    since you last fetched it (result=EXISTS).  Subclass of
     :class:`StoreException`.'''
+
+
+class CASRefreshFailure(CASFailure):
+    '''When trying to refresh a CAS from the memcached, the retrieved value
+    did not match the value sent with the last update.  This may happen if
+    another process has updated the value.  Subclass of
+    :class:`CASFailure`.'''
 
 
 class NotFound(StoreException):
@@ -233,12 +240,19 @@ class ValueSuperStr(str):
 
         return data
 
-    def set(self, value, flags=0, exptime=0):
+    def set(self, value, flags=0, exptime=0, update_cas=False):
         '''Update the value in the server.
 
         The key that was used to retrieve this value is updated in the server.
         If the value was retrieved from the server with `get_cas` enabled,
         then this will update using the CAS.
+
+        :param update_cas: If `True`, a `get()` will be done after the
+            `set()`, and if the result is the same as what we set,
+            update the CAS value in this object.  This is so that multiple
+            updates can be done with CAS set.  This may result in a
+            :py:exc:`~memcached2.CASRefreshFailure`.
+        :type update_cas: boolean
 
         See :py:method:`~memcache2.Memcache.set` for more information.
 
@@ -249,17 +263,30 @@ class ValueSuperStr(str):
         .. note::
 
             If this object was retrieved with `get_cas` set, then multiple
-            updates will trigger a :py:exception:`~memcache2.CASFailure`.
+            updates will trigger a :py:exception:`~memcache2.CASFailure`
+            unless `update_cas` is used.
 
-        :raises: :py:exc:`~memcached2.CASFailure`
+        :raises: :py:exc:`~memcached2.CASFailure`,
+            :py:exc:`~memcached2.CASRefreshFailure`
         '''
         if self.cas_unique:
             if self.cas_unavailable:
                 raise CASFailure('CAS value already consumed.')
             self.cas_unavailable = True
-        return self.memcache.set(
+
+        retval = self.memcache.set(
                 self.key, value, flags=flags, exptime=exptime,
                 cas_unique=self.cas_unique)
+
+        if self.cas_unique and update_cas:
+            result = self.memcache.get(self.key)
+            if result != value:
+                raise CASRefreshFailure(
+                        'Value from server changed during CAS refresh')
+            self.cas_unique = result.cas_unique
+            self.cas_unavailable = False
+
+        return retval
 
     def append(self, value):
         '''Append `value` to the data stored for this key.

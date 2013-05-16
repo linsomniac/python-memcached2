@@ -1,6 +1,11 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 15, 2013
+
+  * ValueSuperStr can now do a CAS refresh on
+    :py:func:`memcached2.ValueSuperStr.set`.
+
 Wed May 8, 2013
 
   * MemcacheValue is now called ValueSuperStr, and it is no longer the

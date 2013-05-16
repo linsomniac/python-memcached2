@@ -1,6 +1,3 @@
-Make ValueSuperStr sub-class that does a re-get after set() if CAS
-      is set, and stores off the new CAS if the returned value is the
-      same as what was set.
 Create ExceptionAreMissesMemcache
 Decide on what to do about automatic pickling.
 Do we want to use flags for pickling/compression indication, or allow

@@ -34,6 +34,7 @@ Exceptions
 .. autoclass:: StoreException
 .. autoclass:: NotStored
 .. autoclass:: CASFailure
+.. autoclass:: CASRefreshFailure
 .. autoclass:: NotFound
 .. autoclass:: NonNumeric
 .. autoclass:: RetrieveException

@@ -61,18 +61,10 @@ class test_ServerConnection(unittest.TestCase):
         result.set('testing')
         self.assertEqual(memcache.get('foo'), 'testing')
 
-        result = memcache.get('foo', get_cas=True)
-        self.assertEqual(result, 'testing')
-        result.set('test2')
-        self.assertEqual(memcache.get('foo'), 'test2')
-        with self.assertRaises(memcached2.CASFailure):
-            result.set('test3')
-        self.assertEqual(memcache.get('foo'), 'test2')
-
         result = memcache.get('foo')
         result.append('>>>')
         result.prepend('<<<')
-        self.assertEqual(memcache.get('foo'), '<<<test2>>>')
+        self.assertEqual(memcache.get('foo'), '<<<testing>>>')
         result.delete()
         with self.assertRaises(memcached2.NoValue):
             memcache.get('foo')
@@ -100,6 +92,45 @@ class test_ServerConnection(unittest.TestCase):
             memcache.get('foo')
 
         memcache.close()
+
+    def test_ValueSuperStrCAS(self):
+        memcache = memcached2.Memcache(
+                ('memcached://localhost/',),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        memcache.set('foo', 'testing')
+        result = memcache.get('foo', get_cas=True)
+        self.assertEqual(result, 'testing')
+        result.set('test2')
+        self.assertEqual(memcache.get('foo'), 'test2')
+        with self.assertRaises(memcached2.CASFailure):
+            result.set('test3')
+        self.assertEqual(memcache.get('foo'), 'test2')
+
+        memcache.set('foo', 'testing')
+        result = memcache.get('foo', get_cas=True)
+        self.assertEqual(result, 'testing')
+        result.set('test2', update_cas=True)
+        self.assertEqual(memcache.get('foo'), 'test2')
+        result.set('test3')
+        self.assertEqual(memcache.get('foo'), 'test3')
+
+        server = CommandServer(
+                [
+                    RECEIVE, 'STORED\r\n',
+                    RECEIVE, 'VALUE foo 0 7 3137\r\ntesting\r\nEND\r\n',
+                    RECEIVE, 'STORED\r\n',
+                    RECEIVE, 'VALUE foo 0 7 3173\r\nhacking\r\nEND\r\n',
+                ])
+        memcache = memcached2.Memcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        memcache.set('foo', 'testing')
+        result = memcache.get('foo', get_cas=True)
+        self.assertEqual(result, 'testing')
+        with self.assertRaises(memcached2.CASRefreshFailure):
+            result.set('test2', update_cas=True)
 
     def test_ValueDictionary(self):
         memcache = memcached2.Memcache(
