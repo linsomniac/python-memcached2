@@ -228,6 +228,7 @@ class ValueSuperStr(str):
         data.key = key
         data.flags = flags
         data.cas_unique = cas_unique
+        data.cas_unavailable = False
         data.memcache = memcache
 
         return data
@@ -249,7 +250,13 @@ class ValueSuperStr(str):
 
             If this object was retrieved with `get_cas` set, then multiple
             updates will trigger a :py:exception:`~memcache2.CASFailure`.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
         '''
+        if self.cas_unique:
+            if self.cas_unavailable:
+                raise CASFailure('CAS value already consumed.')
+            self.cas_unavailable = True
         return self.memcache.set(
                 self.key, value, flags=flags, exptime=exptime,
                 cas_unique=self.cas_unique)
