@@ -26,7 +26,7 @@ import unittest
 import sys
 sys.path.insert(0, '..')
 import mctestsupp
-from mctestsupp import RECEIVE, CommandServer
+from faketcpserver import RECEIVE, CommandServer
 import memcached2
 import time
 

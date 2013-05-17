@@ -27,7 +27,7 @@ import sys
 sys.path.insert(0, '..')
 import mctestsupp
 import memcached2
-from mctestsupp import RECEIVE, CommandServer
+from faketcpserver import RECEIVE, CommandServer
 
 
 class test_ServerConnection(unittest.TestCase):

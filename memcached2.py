@@ -1264,6 +1264,18 @@ class Memcache:
             server.reset()
 
 
+class ExceptionsAreMissesMemcache:
+    '''
+    A :py:class:`~memcached.Memcache` wrapper class which swallows
+    server exceptions, except in the case of coding errors.  This is
+    meant for situations where you want to keep the code simple, and
+    treat cache misses, server errors, and the like as cache misses.
+    See :py:func:`memcached2.Memcache` for details of this class.
+    '''
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
 class ServerConnection:
     '''Low-level communication with the memcached server.
 
