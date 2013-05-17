@@ -1264,16 +1264,66 @@ class Memcache:
             server.reset()
 
 
-class ExceptionsAreMissesMemcache:
+class ExceptionsAreMissesMemcache(Memcache):
     '''
     A :py:class:`~memcached.Memcache` wrapper class which swallows
     server exceptions, except in the case of coding errors.  This is
     meant for situations where you want to keep the code simple, and
     treat cache misses, server errors, and the like as cache misses.
-    See :py:func:`memcached2.Memcache` for details of this class.
+    See :py:func:`memcached2.Memcache` for details of the use of this
+    class, exceptions to that are noted here.
+
+    The methods that are protected against exceptions are those
+    documented in this class.  Everything should otherwise act like
+    a :py:class:`~memcached2.Memcache` instance.
     '''
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError()
+    def get(self, *args, **args):
+        '''Retrieve the specified key from a memcache server.
+
+        Exceptions are swallowed and treated as memcached misses.
+        See :py:func:`~memcached2.Memcache.get` for details on this
+        method.  Changes from the base function are:
+
+        :returns: None if no value or exception, String, or "value_wrapper"
+            as specified during object creation such as
+            `~memcached2.ValueSuperStr`.
+        :raises: Exceptions are swallowed and treated a misses.
+        '''
+        try:
+            ret = super(Memcache, self).get(*args, **kwargs)
+        except (NoValue, ServerDisconnect, NotStored, NotFound, CASFailure):
+            return None
+        return ret
+
+    def set(self, *args, **args):
+        '''Update the value in the server.
+
+        Exceptions are swallowed and treated as memcached misses.
+        See :py:func:`~memcached2.Memcache.set` for details on this
+        method.  Changes from the base function are:
+
+        :raises: Exceptions are swallowed and treated a misses.
+        '''
+        try:
+            super(Memcache, self).set(*args, **kwargs)
+        except (ServerDisconnect, NotStored, NotFound, CASFailure):
+            pass
+        return None
+
+    def delete(self, *args, **args):
+        '''Remove this key from the server.
+
+        Exceptions are swallowed and treated as memcached misses.
+        See :py:func:`~memcached2.Memcache.delete` for details on this
+        method.  Changes from the base function are:
+
+        :raises: Exceptions are swallowed and treated a misses.
+        '''
+        try:
+            ret = super(Memcache, self).delete(*args, **kwargs)
+        except (ServerDisconnect, NoAvailableServers, NotFound):
+            pass
+        return ret
 
 
 class ServerConnection:

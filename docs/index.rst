@@ -27,6 +27,7 @@ Documentation Index
    :maxdepth: 2
 
    whatsnew
+   exceptionsaremissesmemcacheclass
    exceptionsaremissesmappingclass
    hasherclass
    selectorclass
