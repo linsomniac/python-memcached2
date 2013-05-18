@@ -1277,7 +1277,7 @@ class ExceptionsAreMissesMemcache(Memcache):
     documented in this class.  Everything should otherwise act like
     a :py:class:`~memcached2.Memcache` instance.
     '''
-    def get(self, *args, **args):
+    def get(self, *args, **kwargs):
         '''Retrieve the specified key from a memcache server.
 
         Exceptions are swallowed and treated as memcached misses.
@@ -1295,7 +1295,7 @@ class ExceptionsAreMissesMemcache(Memcache):
             return None
         return ret
 
-    def set(self, *args, **args):
+    def set(self, *args, **kwargs):
         '''Update the value in the server.
 
         Exceptions are swallowed and treated as memcached misses.
@@ -1310,7 +1310,7 @@ class ExceptionsAreMissesMemcache(Memcache):
             pass
         return None
 
-    def delete(self, *args, **args):
+    def delete(self, *args, **kwargs):
         '''Remove this key from the server.
 
         Exceptions are swallowed and treated as memcached misses.
