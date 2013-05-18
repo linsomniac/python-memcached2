@@ -1290,10 +1290,9 @@ class ExceptionsAreMissesMemcache(Memcache):
         :raises: Exceptions are swallowed and treated a misses.
         '''
         try:
-            ret = super(Memcache, self).get(*args, **kwargs)
+            return Memcache.get(self, *args, **kwargs)
         except (NoValue, ServerDisconnect, NotStored, NotFound, CASFailure):
             return None
-        return ret
 
     def set(self, *args, **kwargs):
         '''Update the value in the server.
@@ -1305,10 +1304,9 @@ class ExceptionsAreMissesMemcache(Memcache):
         :raises: Exceptions are swallowed and treated a misses.
         '''
         try:
-            super(Memcache, self).set(*args, **kwargs)
+            return Memcache.set(self, *args, **kwargs)
         except (ServerDisconnect, NotStored, NotFound, CASFailure):
-            pass
-        return None
+            return None
 
     def delete(self, *args, **kwargs):
         '''Remove this key from the server.
@@ -1320,10 +1318,9 @@ class ExceptionsAreMissesMemcache(Memcache):
         :raises: Exceptions are swallowed and treated a misses.
         '''
         try:
-            ret = super(Memcache, self).delete(*args, **kwargs)
+            return Memcache.delete(self, *args, **kwargs)
         except (ServerDisconnect, NoAvailableServers, NotFound):
-            pass
-        return ret
+            return None
 
 
 class ServerConnection:

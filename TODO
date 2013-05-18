@@ -1,4 +1,4 @@
-Test ExceptionAreMissesMemcache
+Switch Mapping classes to use ExceptionsAreMissesMemcache.
 Code that does a get/compute/lookup?
    data = cached(key, compute_function)
    def cached(key, compute_function, *args, **kwargs):

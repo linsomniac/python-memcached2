@@ -35,51 +35,40 @@ class test_ServerConnection(unittest.TestCase):
         mctestsupp.flush_local_memcache(self)
 
     def test_Basics(self):
-        dic = memcached2.ExceptionsAreMissesMapping(
+        mc = memcached2.ExceptionsAreMissesMemcache(
                 ('memcached://localhost/',))
 
-        with self.assertRaises(NotImplementedError):
-            for x in dic:
-                pass
-
-        with self.assertRaises(KeyError):
-            dic['foo']
-        self.assertEqual(dic.get('foo'), None)
-        dic['foo'] = 'hello'
-        self.assertEqual(dic['foo'], 'hello')
-        self.assertEqual('foo' in dic, True)
-        self.assertEqual('qux' in dic, False)
-        del(dic['foo'])
-        del(dic['bar'])
-        self.assertEqual('foo' in dic, False)
-        self.assertEqual(dic.get('foo'), None)
-        dic['zot'] = 'a'
-        len(dic)
+        self.assertEqual(mc.get('foo'), None)
+        mc.set('foo', 'hello')
+        self.assertEqual(mc.get('foo'), 'hello')
+        mc.delete('foo')
+        mc.delete('bar')
+        self.assertEqual(mc.get('foo'), None)
 
     def test_SetServerDisconnect(self):
         server = CommandServer([])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        mcd['foo'] = 'bar'
-        mcd['foo'] = 'bar'
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.set('foo', 'bar')
+        mc.set('foo', 'bar')
 
     def test_SetServerReceive(self):
         server = CommandServer([RECEIVE])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        mcd['foo'] = 'bar'
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.set('foo', 'bar')
 
     def test_SetServerNotStored(self):
         server = CommandServer([RECEIVE, 'NOT_STORED\r\n'])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        mcd['foo'] = 'bar'
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.set('foo', 'bar')
 
     def test_SetServerExists(self):
         server = CommandServer([RECEIVE, 'EXISTS\r\n'])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        mcd['foo'] = 'bar'
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.set('foo', 'bar')
 
     def test_SetServerNotFound(self):
         server = CommandServer([RECEIVE, 'NOT FOUND\r\n'])
@@ -89,67 +78,42 @@ class test_ServerConnection(unittest.TestCase):
 
     def test_GetServerDisconnect(self):
         server = CommandServer([])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        with self.assertRaises(KeyError):
-            mcd['foo']
-        with self.assertRaises(KeyError):
-            mcd['foo']
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        self.assertEqual(mc.get('foo'), None)
+        self.assertEqual(mc.get('foo'), None)
 
     def test_GetServerReceive(self):
         server = CommandServer([RECEIVE])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        with self.assertRaises(KeyError):
-            mcd['foo']
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        self.assertEqual(mc.get('foo'), None)
 
     def test_GetServerNoValue(self):
         server = CommandServer([RECEIVE, 'END\r\n'])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        with self.assertRaises(KeyError):
-            mcd['foo']
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        self.assertEqual(mc.get('foo'), None)
 
     def test_DeleteServerDisconnect(self):
         server = CommandServer([])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        del(mcd['foo'])
-        del(mcd['foo'])
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.delete('foo')
+        mc.delete('foo')
 
     def test_DeleteServerReceive(self):
         server = CommandServer([RECEIVE])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        del(mcd['foo'])
-        del(mcd['foo'])
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.delete('foo')
+        mc.delete('foo')
 
     def test_DeleteServerNotFound(self):
         server = CommandServer([RECEIVE, 'NOT_FOUND\r\n'])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        del(mcd['foo'])
-        del(mcd['foo'])
-
-    def test_LenServerDisconnect(self):
-        server = CommandServer([])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        len(mcd)
-        len(mcd)
-
-    def test_LenServerReceive(self):
-        server = CommandServer([RECEIVE])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        len(mcd)
-        len(mcd)
-
-    def test_LenServerNotFound(self):
-        server = CommandServer([RECEIVE, 'END\r\n'])
-        mcd = memcached2.ExceptionsAreMissesMapping((
-            'memcached://localhost:{0}/'.format(server.port),))
-        len(mcd)
-        len(mcd)
+        mc = memcached2.ExceptionsAreMissesMemcache(
+            ('memcached://localhost:{0}/'.format(server.port),))
+        mc.delete('foo')
+        mc.delete('foo')
 
 unittest.main()

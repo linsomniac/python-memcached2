@@ -1,6 +1,11 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 18, 2013
+
+  * Now have a ExceptionsAreMissesMemcache() class for lower-level access
+    that treats exceptions as misses.
+
 Wed May 15, 2013
 
   * ValueSuperStr can now do a CAS refresh on
