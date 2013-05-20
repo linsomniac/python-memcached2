@@ -41,6 +41,23 @@ Got cached results: 'TEST SESSSION DATA'
 >>> result.flags
 0
 
+Usage of
+:py:func:`~memcached2.Memcache.cache` to automatically cache values:
+
+>>> numbers = range(10)
+>>> calculate = lambda x: str(numbers.pop())
+>>> memcache.flush_all()
+>>> memcache.cache('foo', calculate)
+'9'
+>>> memcache.cache('foo', calculate)
+'9'
+>>> memcache.set('foo', 'hello')
+>>> memcache.cache('foo', calculate)
+'hello'
+>>> memcache.flush_all()
+>>> memcache.cache('foo', calculate)
+'8'
+
 Showing flags and expiration time and :py:func:`~memcached2.Memcache.touch`:
 
 >>> memcache.set('foo', 'xXx', flags=12, exptime=30)

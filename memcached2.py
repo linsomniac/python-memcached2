@@ -727,6 +727,27 @@ class Memcache:
                     key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
+    def cache(self, key, function):
+        '''Cached wrapper around function.
+
+        Check for `key` in the cache, and if it's not there, call
+        `function(key)`, store the return value in the cache under `key`.
+
+        :param key: Key in the memcache server(s) for get/set.
+        :type key: str
+        :param function: A function or (other callable) which will be
+            called with `key` as an argument if the key is not able to be
+            looked up in the memcache.
+        :type function: callable
+        :returns: str -- Data from cache, or by calling the function.
+        '''
+        try:
+            return self.get(key)
+        except NoValue:
+            data = function(key)
+            self.set(key, data)
+            return data
+
     def add(self, key, value, flags=0, exptime=0):
         '''Store, but only if the server doesn't already hold data for it.
 

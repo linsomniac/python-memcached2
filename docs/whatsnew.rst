@@ -1,6 +1,11 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 19, 2013
+
+  * Memcache.cache() added which will call a function on a cache miss,
+    then put the result in the cache.
+
 Wed May 18, 2013
 
   * Now have a ExceptionsAreMissesMemcache() class for lower-level access

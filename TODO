@@ -1,12 +1,4 @@
-Code that does a get/compute/lookup?
-   data = cached(key, compute_function)
-   def cached(key, compute_function, *args, **kwargs):
-      data = self.get(key)
-      if data:
-         return data
-      data = compute_function(*args, **kwargs)
-      self.set(key, data)
-      return data
+Put *args, **kwargs onto Memcache.cache.
 Decide on what to do about automatic pickling.
 Do we want to use flags for pickling/compression indication, or allow
       users to use it?  Or have a slightly higher level sits on top of

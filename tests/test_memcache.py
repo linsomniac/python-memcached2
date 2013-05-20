@@ -347,4 +347,29 @@ class test_ServerConnection(unittest.TestCase):
         for i in range(100):
             memcache.set('foo{0}'.format(i), 'bar')
 
+    def test_Cached(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',))
+        memcache.flush_all()
+
+        class Doubler:
+            def __init__(self):
+                self.old_value = 1
+
+            def __call__(self, arg):
+                self.old_value *= 2
+                return str(self.old_value)
+
+        double = Doubler()
+
+        self.assertEqual(memcache.cache('foo', double), '2')
+        self.assertEqual(memcache.cache('foo', double), '2')
+        memcache.flush_all()
+        self.assertEqual(memcache.cache('foo', double), '4')
+        self.assertEqual(memcache.cache('foo', double), '4')
+        memcache.set('foo', '0')
+        self.assertEqual(memcache.cache('foo', double), '0')
+        self.assertEqual(memcache.cache('foo', double), '0')
+        memcache.flush_all()
+        self.assertEqual(memcache.cache('foo', double), '8')
+
 unittest.main()
