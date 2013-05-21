@@ -1,6 +1,11 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 20, 2013
+
+  * Memcache.cache() now takes varargs and kwargs, optionally, which will
+    be passed to the compute function.
+
 Wed May 19, 2013
 
   * Memcache.cache() added which will call a function on a cache miss,

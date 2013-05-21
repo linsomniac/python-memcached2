@@ -355,8 +355,8 @@ class test_ServerConnection(unittest.TestCase):
             def __init__(self):
                 self.old_value = 1
 
-            def __call__(self, arg):
-                self.old_value *= 2
+            def __call__(self, arg, add=0):
+                self.old_value = (self.old_value * 2) + add
                 return str(self.old_value)
 
         double = Doubler()
@@ -364,12 +364,12 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(memcache.cache('foo', double), '2')
         self.assertEqual(memcache.cache('foo', double), '2')
         memcache.flush_all()
-        self.assertEqual(memcache.cache('foo', double), '4')
-        self.assertEqual(memcache.cache('foo', double), '4')
+        self.assertEqual(memcache.cache('foo', double, 1), '5')
+        self.assertEqual(memcache.cache('foo', double, 1), '5')
         memcache.set('foo', '0')
         self.assertEqual(memcache.cache('foo', double), '0')
         self.assertEqual(memcache.cache('foo', double), '0')
         memcache.flush_all()
-        self.assertEqual(memcache.cache('foo', double), '8')
+        self.assertEqual(memcache.cache('foo', double), '10')
 
 unittest.main()

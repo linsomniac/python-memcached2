@@ -727,7 +727,7 @@ class Memcache:
                     key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
-    def cache(self, key, function):
+    def cache(self, key, function, *args, **kwargs):
         '''Cached wrapper around function.
 
         Check for `key` in the cache, and if it's not there, call
@@ -739,12 +739,16 @@ class Memcache:
             called with `key` as an argument if the key is not able to be
             looked up in the memcache.
         :type function: callable
+        :param *args: Additional arguments for `function`.
+        :type *args: Arguments
+        :param **kwargs: Additional keyword arguments for `function`.
+        :type **kwargs: Keyword arguments
         :returns: str -- Data from cache, or by calling the function.
         '''
         try:
             return self.get(key)
         except NoValue:
-            data = function(key)
+            data = function(key, *args, **kwargs)
             self.set(key, data)
             return data
 

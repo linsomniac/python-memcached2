@@ -1,4 +1,3 @@
-Put *args, **kwargs onto Memcache.cache.
 Decide on what to do about automatic pickling.
 Do we want to use flags for pickling/compression indication, or allow
       users to use it?  Or have a slightly higher level sits on top of
