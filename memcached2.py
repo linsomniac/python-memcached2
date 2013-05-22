@@ -698,6 +698,64 @@ class Memcache:
                     body, key, flags, cas_unique, memcache=self)
         return body
 
+    def get_multi(self, keys, get_cas=False):
+        '''Retrieve the specified keys from a memcache server.
+
+        This will determine the servers that the different keys are on, and
+        send a request for all the specified keys that are on that server
+        as a single request.  All the results are correlated and returned.
+
+        :param key: The key to lookup in the memcache server.
+        :type key: list of str
+        :param get_cas: If True, the "cas unique" is queried and the return
+            object has the "cas_unique" attribute set.
+        :type get_cas: bool
+        :returns: Dictionary of keys, the associated value is str,
+            or "value_wrapper" as specified during object creation such as
+            `~memcached2.ValueSuperStr`.
+        :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
+        '''
+
+        raise NotImplementedError()
+        if get_cas:
+            server = self._send_command('gets {0}\r\n'.format(key), key)
+        else:
+            server = self._send_command('get {0}\r\n'.format(key), key)
+
+        data = server.read_until('\r\n')
+        if data == 'END\r\n':
+            raise NoValue()
+
+        if not data.startswith('VALUE'):
+            raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data)))
+        split_data = data.rstrip().split()[1:]
+        key = split_data[0]
+        flags = int(split_data[1])
+        length = int(split_data[2])
+        if len(split_data) > 3:
+            cas_unique = int(split_data[3])
+        else:
+            cas_unique = None
+        body = server.read_length(length)
+
+        data = server.read_until('\r\n')   # trailing termination
+        if data != '\r\n':
+            raise NotImplementedError(
+                    'Unexpected response when looking for terminator: {0}'
+                    .format(data))
+
+        data = server.read_until('\r\n')
+        if data != 'END\r\n':
+            raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data)))
+
+        if self.value_wrapper:
+            return self.value_wrapper(
+                    body, key, flags, cas_unique, memcache=self)
+        return body
+
     def set(self, key, value, flags=0, exptime=0, cas_unique=None):
         '''Set a key to the value in the memcache server.
 
