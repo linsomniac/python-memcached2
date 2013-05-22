@@ -1,9 +1,9 @@
-Decide on what to do about automatic pickling.
-Do we want to use flags for pickling/compression indication, or allow
-      users to use it?  Or have a slightly higher level sits on top of
-      Memcache() and can do pickling and compression?
 Make "get" accept multiple keys (see "get <key>*" in protocol docs).
       How will that work, considering they could hash to multiple servers?
       Collect the ones that go to the same server and send them as groups?
+Decide on what to do about automatic pickling.
+   Do we want to use flags for pickling/compression indication, or allow
+   users to use it?  Or have a slightly higher level sits on top of
+   Memcache() and can do pickling and compression?
 Make it so that Value wrapper can merge get_multi results?
 Make a old memcache compatible interface (to the extent possible)?
