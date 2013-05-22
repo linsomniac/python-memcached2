@@ -3,6 +3,8 @@ Modify the _send_command so the server can be specified instead of key.
 Modify get_multi to use the above.
 Is there a "gets <key>*"?
 Modify the Mapper class so you can pre-grab values via multi?
+set_multi?  If so, it needs to have a select loop for sending and
+      receiving so that there is no potential deadlocks or blocking.
 Decide on what to do about automatic pickling.
    Do we want to use flags for pickling/compression indication, or allow
    users to use it?  Or have a slightly higher level sits on top of
