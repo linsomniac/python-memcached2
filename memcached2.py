@@ -705,6 +705,33 @@ class Memcache:
                     body, key, flags, cas_unique, memcache=self)
         return body
 
+    def _keys_by_server(self, keys):
+        '''Hash a bunch of keys and return them grouped by server.
+
+        The hashing function is called on each key to determine which server
+        houses it.  The keys are grouped by what server they belong to.
+        This is so that commands that operate on multiple keys at the same
+        time can be sent to the correct server, such as with the memcached
+        "get" and "gets" commands.
+
+        Example:
+
+            >>> mcd._keys_by_server(('a', 'b', 'c', 'd'))
+            [(<ServerConnection 1>, ['a', 'c']),
+             (<ServerConnection 2>, ['b', 'd']))
+
+        :param keys: Keys to be hashed to determine the server they are
+                associated with.
+        :type keys: A list of strs.
+        :returns: A list of `(server,keys)` pairs, where the `keys` is a
+                list of keys associated with that server.
+        '''
+        server_map = collections.defaultdict(list)
+        for key in keys:
+            server = self.selector.select(self.servers, self.hasher.hash(key))
+            server_map[server].append(key)
+        return server_map.items()
+
     def get_multi(self, keys, get_cas=False):
         '''Retrieve the specified keys from a memcache server.
 
@@ -724,11 +751,17 @@ class Memcache:
             :py:exc:`~memcached2.NoAvailableServers`
         '''
 
-        raise NotImplementedError()
+        command = 'gets {0}\r\n'
         if get_cas:
-            server = self._send_command('gets {0}\r\n'.format(key), key)
-        else:
-            server = self._send_command('get {0}\r\n'.format(key), key)
+            command = 'get {0}\r\n'
+
+        for server, keys in self._keys_by_server(keys):
+            if get_cas:
+                self._send_command('gets {0}\r\n'.format(' '.join(keys)), server=server)
+            else:
+                self._send_command('get {0}\r\n'.format(' '.join(keys)), server=server)
+
+        raise NotImplementedError()
 
         data = server.read_until('\r\n')
         if data == 'END\r\n':
@@ -1593,3 +1626,6 @@ class ServerConnection:
             self.buffer += data
 
         return self.consume_from_buffer(length)
+
+    def __repr__(self):
+        return '<ServerConnection to {0}>'.format(self.uri)

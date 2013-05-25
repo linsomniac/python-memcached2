@@ -372,4 +372,18 @@ class test_ServerConnection(unittest.TestCase):
         memcache.flush_all()
         self.assertEqual(memcache.cache('foo', double), '10')
 
+    def test_KeysByServer(self):
+        memcache = memcached2.Memcache(('memcached://localhost/',
+                'memcached://localhost/',))
+
+        data = memcache._keys_by_server(['a', 'b', 'c', 'd', 'e', 'f'])
+        self.assertEqual(data[0][1], ['a', 'c', 'd', 'f'])
+        self.assertEqual(data[1][1], ['b', 'e'])
+
+    def test_repr(self):
+        server = memcached2.ServerConnection('memcached://localhost/')
+        self.assertEqual(
+                repr(server), '<ServerConnection to memcached://localhost/>')
+
+
 unittest.main()
