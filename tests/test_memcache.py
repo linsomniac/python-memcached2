@@ -376,9 +376,10 @@ class test_ServerConnection(unittest.TestCase):
         memcache = memcached2.Memcache(('memcached://localhost/',
                 'memcached://localhost/',))
 
-        data = memcache._keys_by_server(['a', 'b', 'c', 'd', 'e', 'f'])
-        self.assertEqual(data[0][1], ['a', 'c', 'd', 'f'])
-        self.assertEqual(data[1][1], ['b', 'e'])
+        data = list(memcache._keys_by_server(['a', 'b', 'c', 'd', 'e', 'f']))
+        self.assertEqual(
+                (sorted((data[0][1], data[1][1]))),
+                [['a', 'c', 'd', 'f'], ['b', 'e']])
 
     def test_repr(self):
         server = memcached2.ServerConnection('memcached://localhost/')
