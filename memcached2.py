@@ -620,22 +620,29 @@ class Memcache:
     def __del__(self):
         self.close()
 
-    def _send_command(self, command, key):
+    def _send_command(self, command, key=None, server=None):
         '''INTERNAL: Send a command to a server.
 
         :param command: The memcache-protocol command to send to the
             server, a string terminated with CR+NL.
         :type command: str
         :param key: The key within the command, used to determine what
+            server to send the command to.  If None, `server` is expected
+            to be set.
+        :type key: str or None
+        :param server: The key within the command, used to determine what
             server to send the command to.
-        :type key: str
+        :type server: :py:class:`~memcached2.ServerConnection` instance
+            or None.  If None, `key` is expected to be set to select which
+            server to send the command to.
         :returns: :py:class:`~memcached2.ServerConnection` -- The server object
             that the command was sent to.
         :raises: :py:exc:`~memcached2.NoAvailableServers`,
             :py:exc:`~memcached2.ServerDisconnect`
         '''
         command = _to_bytes(command)
-        server = self.selector.select(self.servers, self.hasher.hash(key))
+        if not server:
+            server = self.selector.select(self.servers, self.hasher.hash(key))
 
         try:
             server.send_command(command)
