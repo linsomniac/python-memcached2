@@ -41,6 +41,19 @@ Got cached results: 'TEST SESSSION DATA'
 >>> result.flags
 0
 
+Example of :py:func:`~memcached2.Memcache.get_multi` to retrieve multiple
+keys quickly:
+
+>>> memcache.set('foo', '1')
+>>> memcache.set('bar', '2')
+>>> result = memcache.get_multi(['foo', 'bar', 'baz'])
+>>> result.get('foo')
+'1'
+>>> result.get('bar')
+'2'
+>>> result.get('baz')
+None
+
 Usage of
 :py:func:`~memcached2.Memcache.cache` to automatically cache values:
 

@@ -1,6 +1,6 @@
+Consolidate code from get/get_multi.
 Consistent hashing when servers are down.
 Server connection pooling.
-Modify get_multi to use the new _send_command()
 Modify the Mapper class so you can pre-grab values via multi?
 set_multi?  If so, it needs to have a select loop for sending and
       receiving so that there is no potential deadlocks or blocking.

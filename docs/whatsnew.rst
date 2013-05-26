@@ -1,6 +1,10 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 25, 2013
+
+  * Added get_multi which can get multiple keys at once.
+
 Wed May 22, 2013
 
   * Memcache now has a get_multi() method that will get multiple keys at
