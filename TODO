@@ -1,4 +1,3 @@
-Consolidate code from get/get_multi.
 set_multi?
 Consistent hashing when servers are down.
 Server connection pooling.

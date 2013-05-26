@@ -653,61 +653,6 @@ class Memcache:
 
         return server
 
-    def get(self, key, get_cas=False):
-        '''Retrieve the specified key from a memcache server.
-
-        :param key: The key to lookup in the memcache server.
-        :type key: str
-        :param get_cas: If True, the "cas unique" is queried and the return
-            object has the "cas_unique" attribute set.
-        :type get_cas: bool
-        :returns: String, or "value_wrapper" as specified during object
-            creation such as `~memcached2.ValueSuperStr`.
-        :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`,
-            :py:exc:`~memcached2.NoAvailableServers`
-        '''
-
-        command = 'get {0}\r\n'
-        if get_cas:
-            command = 'gets {0}\r\n'
-        server = self._send_command(command.format(key), key)
-
-        data = server.read_until('\r\n')
-        if data == 'END\r\n':
-            raise NoValue()
-
-        if not data.startswith('VALUE'):
-            raise NotImplementedError(
-                    'Unknown response: {0}'.format(repr(data[:30])))
-
-        value_data = data.rstrip().split()[1:]
-
-        key = value_data[0]
-        flags = int(value_data[1])
-        length = int(value_data[2])
-        body = server.read_length(length)
-
-        if len(value_data) > 3:
-            cas_unique = int(value_data[3])
-        else:
-            cas_unique = None
-
-        data = server.read_until('\r\n')   # trailing termination
-        if data != '\r\n':
-            raise NotImplementedError(
-                    'Unexpected response when looking for terminator: {0}'
-                    .format(data))
-
-        data = server.read_until('\r\n')
-        if data != 'END\r\n':
-            raise NotImplementedError(
-                    'Unknown response: {0}'.format(repr(data[:30])))
-
-        if self.value_wrapper:
-            return self.value_wrapper(
-                    body, key, flags, cas_unique, memcache=self)
-        return body
-
     def _keys_by_server(self, keys):
         '''Hash a bunch of keys and return them grouped by server.
 
@@ -734,6 +679,78 @@ class Memcache:
             server = self.selector.select(self.servers, self.hasher.hash(key))
             server_map[server].append(key)
         return server_map.items()
+
+    def _get_parser(self, server):
+        '''Read the results of a get command from the server.
+
+        This is meant to be called after a get/gets command and parses the
+        results.  This must be called repeatedly until it returns
+        `(None,None)`, at which point the results have been fully consumed.
+
+        :returns: A tuple of `(key,value)`, or `(None,None)` if "END"
+                was received.
+        :raises: :py:exc:`NotImplementedError`
+        '''
+        data = server.read_until('\r\n')
+        if data == 'END\r\n':
+            return None, None
+
+        if not data.startswith('VALUE'):
+            raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data[:30])))
+
+        value_data = data.rstrip().split()[1:]
+
+        key = value_data[0]
+        flags = int(value_data[1])
+        length = int(value_data[2])
+        body = server.read_length(length)
+
+        if len(value_data) > 3:
+            cas_unique = int(value_data[3])
+        else:
+            cas_unique = None
+
+        data = server.read_until('\r\n')   # trailing termination
+        if data != '\r\n':
+            raise NotImplementedError(
+                    'Unexpected response when looking for terminator: {0}'
+                    .format(data))
+
+        if self.value_wrapper:
+            return key, self.value_wrapper(
+                    body, key, flags, cas_unique, memcache=self)
+        return key, body
+
+    def get(self, key, get_cas=False):
+        '''Retrieve the specified key from a memcache server.
+
+        :param key: The key to lookup in the memcache server.
+        :type key: str
+        :param get_cas: If True, the "cas unique" is queried and the return
+            object has the "cas_unique" attribute set.
+        :type get_cas: bool
+        :returns: String, or "value_wrapper" as specified during object
+            creation such as `~memcached2.ValueSuperStr`.
+        :raises: :py:exc:`~memcached2.NoValue`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
+        '''
+
+        command = 'get {0}\r\n'
+        if get_cas:
+            command = 'gets {0}\r\n'
+        server = self._send_command(command.format(key), key)
+
+        key, value = self._get_parser(server)
+        if key is None:
+            raise NoValue()
+
+        data = server.read_until('\r\n')
+        if data != 'END\r\n':
+            raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data[:30])))
+
+        return value
 
     def get_multi(self, keys, get_cas=False):
         '''Retrieve the specified keys from a memcache server.
@@ -765,39 +782,11 @@ class Memcache:
             self._send_command(command.format(key_str), server=server)
 
             while True:
-                data = server.read_until('\r\n')
-
-                if data == 'END\r\n':
+                key, value = self._get_parser(server)
+                if key is None:
                     break
 
-                if not data.startswith('VALUE'):
-                    raise NotImplementedError(
-                            'Unknown response: {0}'.format(repr(data[:30])))
-
-                value_data = data.rstrip().split()[1:]
-
-                key = value_data[0]
-                flags = int(value_data[1])
-                length = int(value_data[2])
-                body = server.read_length(length)
-
-                if len(value_data) > 3:
-                    cas_unique = int(value_data[3])
-                else:
-                    cas_unique = None
-
-                data = server.read_until('\r\n')   # trailing termination
-                if data != '\r\n':
-                    raise NotImplementedError(
-                            'Unexpected response when looking for '
-                            'terminator: {0}'
-                            .format(repr(data[:30])))
-
-                if self.value_wrapper:
-                    results[key] = self.value_wrapper(
-                            body, key, flags, cas_unique, memcache=self)
-                else:
-                    results[key] = body
+                results[key] = value
 
         return results
 
