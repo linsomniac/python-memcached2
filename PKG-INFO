@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: python-memcached
+Version: X.XX
+Summary: A new Python memcached client library.
+Home-page: http://www.tummy.com/Community/software/python-memcached2/
+Author: Sean Reifschneider
+Author-email: jafo-memcached@tummy.com
+License: Apache
+Description: A next-generation Python memcached client library.
+Platform: UNKNOWN
