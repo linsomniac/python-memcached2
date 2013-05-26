@@ -1,4 +1,5 @@
 Consolidate code from get/get_multi.
+set_multi?
 Consistent hashing when servers are down.
 Server connection pooling.
 Modify the Mapper class so you can pre-grab values via multi?
