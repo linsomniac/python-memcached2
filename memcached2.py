@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__author__    = 'Sean Reifschneider <jafo@tummy.com>'
+__author__ = 'Sean Reifschneider <jafo@tummy.com>'
 __version__ = 'X.XX'
 __copyright__ = 'Copyright (C) 2013 Sean Reifschneider, tummy.com, ltd.'
-__license__   = 'Apache'
+__license__ = 'Apache'
 
 '''
 .. module:: memcached2
