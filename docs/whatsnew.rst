@@ -1,6 +1,12 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 27, 2013
+
+  * SelectorAvailableServers now can flush all servers when the topology
+    changes.  That's the situation it is most suited for, though it's also
+    ideal for 2 server clusters.
+
 Wed May 25, 2013
 
   * Added get_multi which can get multiple keys at once.

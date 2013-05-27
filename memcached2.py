@@ -523,18 +523,30 @@ class SelectorFirst(SelectorBase):
 class SelectorAvailableServers(SelectorBase):
     '''Select among all "up" server connections.
 
+    In the event that a server goes down or comes back up, the keyspace
+    is remapped across all servers.  This requires that much of the keyspace
+    needs to be rebuilt.
+
+    This is most suitable for either 2 servers or when you want to ensure
+    no stale data in the cache if a server flaps, via flushing of the
+    caches on a topology change.
+
     After a specified number of operations, and at the first operation, an
     attempt will be made to connect to any servers that are not currently
     up.
     '''
-    def __init__(self, reconnect_frequency=100):
+    def __init__(self, reconnect_frequency=100, topological_flush=False):
         '''
         :param reconnect_frequency: Every this many operations, attempt
             reconecting to all down servers.
         :type reconnect_frequency: int
+        :param topological_flush: Flush all servers when the topology changes.
+        :type topological_flush: boolean
         '''
         self.reconnect_frequency = reconnect_frequency
         self.operations_to_next_reconnect = 0
+        self.topological_flush = topological_flush
+        self.old_topology = None
 
     def select(self, server_list, key_hash):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
@@ -551,6 +563,10 @@ class SelectorAvailableServers(SelectorBase):
         if not up_server_list:
             raise NoAvailableServers()
 
+        if self.topological_flush:
+            if self.old_topology == up_server_list:
+                self.flush_all()
+                self.old_topology = up_server_list
         return up_server_list[key_hash % len(up_server_list)]
 
 
