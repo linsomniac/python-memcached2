@@ -1,6 +1,11 @@
 What's New in python-memcachee2
 *******************************
 
+Wed May 28, 2013
+
+  * Adding :py:func:`memcached2.Memcache.delete_all` and
+    :py:func:`memcached2.ValueSuperStr.sdelete_allet`.
+
 Wed May 27, 2013
 
   * SelectorAvailableServers now can flush all servers when the topology

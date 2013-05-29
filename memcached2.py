@@ -364,6 +364,17 @@ class ValueSuperStr(str):
             raise CASFailure('Not supported with CAS')
         return self.memcache.delete(self.key)
 
+    def delete_all(self):
+        '''Remove this key from all of the the servers.
+
+        See :py:method:`~memcache2.Memcache.delete_all` for more information.
+
+        :raises: :py:exc:`~memcached2.CASFailure`
+        '''
+        if self.cas_unique is not None:
+            raise CASFailure('Not supported with CAS')
+        return self.memcache.delete_all(self.key)
+
     def touch(self, exptime):
         '''Update the expiration time on an item.
 
@@ -935,7 +946,8 @@ class Memcache:
         :param key: Key used to store value in memcache server and hashed to
             determine which server is used.
         :type key: str
-        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`,
+        :returns: Boolean indicating if key was deleted.
+        :raises: :py:exc:`NotImplementedError`,
             :py:exc:`~memcached2.NoAvailableServers`
         '''
         command = 'delete {0}\r\n'.format(key)
@@ -945,12 +957,45 @@ class Memcache:
         data = server.read_until('\r\n')
 
         if data == 'DELETED\r\n':
-            return
+            return True
         if data == 'NOT_FOUND\r\n':
-            raise NotFound()
+            return False
 
         raise NotImplementedError(
                 'Unknown return data from server: "{0}"'.format(repr(data)))
+
+    def delete_all(self, key):
+        '''Delete the key from all servers if it exists.
+
+        This might be used in the case where you want to ensure that any
+        future topology changes will be less likely to pick up any old data.
+
+        If the key is not found, :py:exc:`~memcached2.NotFound` is raised.
+
+        :param key: Key used to store value in memcache servers.
+        :type key: str
+        :returns: Boolean indicating if key was deleted.
+        :raises: :py:exc:`~memcached2.NotFound`, :py:exc:`NotImplementedError`,
+            :py:exc:`~memcached2.NoAvailableServers`
+        '''
+        command = 'delete {0}\r\n'.format(key)
+
+        found_key = False
+        for server in [x for x in self.servers if x.backend]:
+            self._send_command(command, server=server)
+
+            data = server.read_until('\r\n')
+
+            if data == 'DELETED\r\n':
+                found_key = True
+            elif data == 'NOT_FOUND\r\n':
+                pass
+            else:
+                raise NotImplementedError(
+                        'Unknown return data from server: "{0}"'
+                        .format(repr(data)))
+
+        return found_key
 
     def touch(self, key, exptime):
         '''Update the expiration time on an item.
@@ -1457,8 +1502,8 @@ class ExceptionsAreMissesMemcache(Memcache):
         '''
         try:
             return Memcache.delete(self, *args, **kwargs)
-        except (ServerDisconnect, NoAvailableServers, NotFound):
-            return None
+        except (ServerDisconnect, NoAvailableServers):
+            return False
 
 
 class ServerConnection:

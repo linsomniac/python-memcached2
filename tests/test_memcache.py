@@ -65,9 +65,14 @@ class test_ServerConnection(unittest.TestCase):
         result.append('>>>')
         result.prepend('<<<')
         self.assertEqual(memcache.get('foo'), '<<<testing>>>')
-        result.delete()
+        self.assertEqual(result.delete(), True)
         with self.assertRaises(memcached2.NoValue):
             memcache.get('foo')
+
+        memcache.set('foo', 'bar')
+        result = memcache.get('foo')
+        self.assertEqual(result.delete_all(), True)
+        self.assertEqual(result.delete_all(), False)
 
         memcache.set('foo', '1')
         result = memcache.get('foo')
@@ -260,11 +265,17 @@ class test_ServerConnection(unittest.TestCase):
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.set('foo', 'bar')
         self.assertEqual(memcache.get('foo'), 'bar')
-        memcache.delete('foo')
-        with self.assertRaises(memcached2.NoValue):
-            memcache.get('foo')
-        with self.assertRaises(memcached2.NotFound):
-            memcache.delete('foo')
+        self.assertEqual(memcache.delete('foo'), True)
+        self.assertEqual(memcache.delete('bar'), False)
+        self.assertEqual(memcache.delete('foo'), False)
+        self.assertEqual(memcache.delete('foo'), False)
+
+    def test_DeleteAll(self):
+        memcache = memcached2.Memcache(
+                ('memcached://localhost/', 'memcached://localhost/',))
+        memcache.set('foo', 'bar')
+        self.assertEqual(memcache.delete_all('foo'), True)
+        self.assertEqual(memcache.delete_all('foo'), False)
 
     def test_FlushAll(self):
         memcache = memcached2.Memcache(('memcached://localhost/',))
