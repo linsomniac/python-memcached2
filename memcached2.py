@@ -534,9 +534,11 @@ class SelectorFirst(SelectorBase):
 class SelectorAvailableServers(SelectorBase):
     '''Select among all "up" server connections.
 
+    This was the default in the original python-memcached module.
+
     In the event that a server goes down or comes back up, the keyspace
     is remapped across all servers.  This requires that much of the keyspace
-    needs to be rebuilt.
+    be rebuilt.
 
     This is most suitable for either 2 servers or when you want to ensure
     no stale data in the cache if a server flaps, via flushing of the
@@ -570,6 +572,70 @@ class SelectorAvailableServers(SelectorBase):
         else:
             self.operations_to_next_reconnect -= 1
 
+        up_server_list = [x for x in server_list if x.backend]
+        if not up_server_list:
+            raise NoAvailableServers()
+
+        if self.topological_flush:
+            if self.old_topology == up_server_list:
+                self.flush_all()
+                self.old_topology = up_server_list
+        return up_server_list[key_hash % len(up_server_list)]
+
+
+class SelectorRehashOnDownServer(SelectorBase):
+    '''Re-hash keyspace on down server among up servers.
+
+    If a server goes down or comes back up, keys that normally would be placed
+    on other servers shouldn't be re-hashed.  This Selector hashes the keys
+    as normal, and only if the key resides on a server that is down does it
+    hash it against the servers that are up.
+
+    The plus side is that the "circle" of servers as in Consistent Hashing
+    doesn't need to be created and searched, particularly if you have
+    short-running processes.
+
+    The down side is that if the population of down servers changes
+    frequently, the keys that map to down servers will get re-shuffled
+    on every topology change.
+
+    This is most suitable for large numbers of servers or servers that
+    rarely have topology changes.
+
+    After a specified number of operations, and at the first operation, an
+    attempt will be made to connect to any servers that are not currently
+    up.
+    '''
+    def __init__(self, reconnect_frequency=100, topological_flush=False):
+        '''
+        :param reconnect_frequency: Every this many operations, attempt
+            reconecting to all down servers.
+        :type reconnect_frequency: int
+        :param topological_flush: Flush all servers when the topology changes.
+        :type topological_flush: boolean
+        '''
+        self.reconnect_frequency = reconnect_frequency
+        self.operations_to_next_reconnect = 0
+        self.topological_flush = topological_flush
+        self.old_topology = None
+
+    def select(self, server_list, key_hash):
+        '''See :py:func:`memcached2.SelectorBase.select` for details of
+        this function.
+        '''
+        if self.operations_to_next_reconnect < 1:
+            self.operations_to_next_reconnect = self.reconnect_frequency
+            for server in [x for x in server_list if not x.backend]:
+                server.connect()
+        else:
+            self.operations_to_next_reconnect -= 1
+
+        #  try across all servers
+        server = server_list[key_hash % len(server_list)]
+        if server.backend:
+            return server
+
+        #  only try up servers
         up_server_list = [x for x in server_list if x.backend]
         if not up_server_list:
             raise NoAvailableServers()
@@ -634,20 +700,25 @@ class Memcache:
 
         self.servers = [ServerConnection(x) for x in servers]
 
-        self.hasher = hasher
         self.value_wrapper = value_wrapper
+
+        if hasher is not None:
+            self.hasher = hasher
+        else:
+            if len(self.servers) < 2:
+                self.hasher = HasherZero()
+            else:
+                self.hasher = HasherCMemcache()
 
         if selector is not None:
             self.selector = selector
         else:
             if len(self.servers) < 2:
                 self.selector = SelectorFirst()
-                if hasher is None:
-                    self.hasher = HasherZero()
-            else:
+            elif len(self.servers) == 2:
                 self.selector = SelectorAvailableServers()
-                if hasher is None:
-                    self.hasher = HasherCMemcache()
+            else:
+                self.selector = SelectorRehashOnDownServer()
 
     def __del__(self):
         self.close()

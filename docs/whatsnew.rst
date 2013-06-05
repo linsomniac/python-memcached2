@@ -1,6 +1,15 @@
 What's New in python-memcachee2
 *******************************
 
+Tue Jun 04, 2013
+
+  * Fixing a bug if Memcache(selector+XXX) is used, hasher was not being
+    set.
+
+  * Created SelectorRehashOnDownServer which will hash to the same server,
+    unless that server is down in which case it will rehash among only the
+    up servers.
+
 Wed May 28, 2013
 
   * Adding :py:func:`memcached2.Memcache.delete_all` and
