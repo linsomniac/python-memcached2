@@ -42,6 +42,7 @@ import socket
 import sys
 from binascii import crc32
 import collections
+from bisect import bisect
 
 PY3 = sys.version > '3'
 if not PY3:
@@ -660,6 +661,95 @@ class SelectorRestirOnDownServer(SelectorBase):
                 self.flush_all()
                 self.old_topology = up_server_list
         return up_server_list[original_hash % len(up_server_list)]
+
+
+class SelectorConsistentHashing(SelectorBase):
+    '''Predictably select a server, even if its normal server is down.
+
+    This implements the Consistent Hash algorithm as
+    http://en.wikipedia.org/wiki/Consistent_hashing
+
+    This is done by splitting the key-space up into a number of buckets
+    (more than the number of servers but probably no more than the
+    number of servers squared).  See Wikipedia for details on how this
+    algorithm operates.
+
+    The downside of this mechanism is that it requires building a fairly
+    large table at startup, so it is not suited to short lived code.
+    It also is fairly expensive to add and remove servers from the pool
+    (not implemented in this code).  Note that it is NOT expensive to
+    fail a server, only to completely remove it.
+
+    After a specified number of operations, and at the first operation, an
+    attempt will be made to connect to any servers that are not currently
+    up.
+    '''
+    def __init__(self, topological_flush=False, total_buckets=None):
+        '''
+        :param topological_flush: Flush all servers when the topology changes.
+        :type topological_flush: boolean
+        :param total_buckets: How many buckets to create.  Smaller values
+                decrease the startup overhead, but also mean that a down
+                server will tend to not evenly redistribute it's load across
+                other servers.  The default value of None means the default
+                value of the number of servers squared.
+        :type total_buckets: int
+        '''
+        self.topological_flush = topological_flush
+        self.total_buckets = None
+        self.buckets = None
+
+    def _initialize_buckets(self, server_list, hasher):
+        if self.buckets is not None:
+            return
+        len_server_list = len(server_list)
+        if not self.total_buckets:
+            self.total_buckets = len_server_list * len_server_list
+
+        bucket_dict = {}
+        for i in range(self.total_buckets):
+            bucket_dict[hasher(str(i))] = i % len_server_list
+
+        self.buckets = sorted(bucket_dict.items())
+
+    def select(self, server_list, hasher, key):
+        '''See :py:func:`memcached2.SelectorBase.select` for details of
+        this function.
+        '''
+        if self.buckets is None:
+            self._initialize_buckets(server_list, hasher)
+
+        hashed_key = hasher(key)
+        offset = bisect(self.buckets, (hashed_key, 0))
+        len_buckets = len(self.buckets)
+        len_server_list = len(server_list)
+        already_tried_servers = set()
+        for i in range(len_buckets):
+            if len(already_tried_servers) == len_server_list:
+                raise NoAvailableServers()
+
+            bucket_offset = (offset + i) % len_buckets
+
+            #  the last bucket covers things up to the first bucket
+            if bucket_offset == 0 and hashed_key < self.buckets[0][0]:
+                bucket = self.buckets[-1]
+            else:
+                bucket = self.buckets[bucket_offset]
+
+            server_offset = bucket[1]
+            server = server_list[server_offset]
+            if server_offset in already_tried_servers:
+                continue
+            already_tried_servers.update([server_offset])
+
+            if not server.backend:
+                server.connect()
+                if self.topological_flush and server.backend:
+                    self.flush_all()
+            if server.backend:
+                return server
+
+        raise NoAvailableServers()
 
 
 class Memcache:

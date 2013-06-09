@@ -1,6 +1,11 @@
 What's New in python-memcachee2
 *******************************
 
+Sun Jun 09, 2013
+
+  * Added :py:class:`~memcached2.SelectorConsistentHashing` that implements
+    this algorithm for server selection.
+
 Sun Jun 08, 2013
 
   * Removed :py:class:`~memcached2.SelectorRehashOnDownServer` and replaced

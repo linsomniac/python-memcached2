@@ -426,5 +426,13 @@ class test_ServerConnection(unittest.TestCase):
         for i in range(10):
             memcache.set(str(i), '*' * i)
 
+    def test_SelectorConsistentHashing(self):
+        memcache = memcached2.Memcache((
+                'memcached://localhost/', 'memcached://localhost/',),
+                selector=memcached2.SelectorConsistentHashing())
+
+        for i in range(10):
+            memcache.set(str(i), '*' * i)
+
 
 unittest.main()
