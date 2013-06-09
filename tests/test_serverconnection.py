@@ -88,7 +88,7 @@ class test_ServerConnection(unittest.TestCase):
         selector = memcached2.SelectorFirst()
         sc = memcached2.ServerConnection('memcached://127.0.0.1/')
         sc2 = memcached2.ServerConnection('memcached://127.0.0.1:11234/')
-        self.assertEqual(selector.select([sc, sc2], None), sc)
+        self.assertEqual(selector.select([sc, sc2], None, None), sc)
         sc.reset()
         sc2.reset()
 

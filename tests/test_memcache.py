@@ -410,10 +410,10 @@ class test_ServerConnection(unittest.TestCase):
         self.assertEqual(
                 repr(server), '<ServerConnection to memcached://localhost/>')
 
-    def test_SelectorRehashOnDownServer(self):
+    def test_SelectorRestirOnDownServer(self):
         memcache = memcached2.Memcache((
                 'memcached://localhost/', 'memcached://localhost/',),
-                selector=memcached2.SelectorRehashOnDownServer())
+                selector=memcached2.SelectorRestirOnDownServer())
 
         for i in range(10):
             memcache.set(str(i), '*' * i)

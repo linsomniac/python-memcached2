@@ -494,7 +494,7 @@ class SelectorBase:
     See :py:func:`~memcached2.SelectorBase.select` for details of implementing
     a subclass.
     '''
-    def select(self, server_list, key_hash):
+    def select(self, server_list, hasher, key):
         '''Select a server bashed on the `key_hash`.
 
         Given the list of servers and a hash of of key, determine which
@@ -506,9 +506,11 @@ class SelectorBase:
 
         :param server_list: A list of the servers to select among.
         :type server_list: list of :py:class:`~memcache2.ServerConnection`.
-        :param key_hash: Hash of the key, as returned by
+        :param hasher: Hasher function, such as
             :py:func:`memcache2.HasherBase.hash`.
-        :type key_hash: int
+        :type hasher: :py:func:`memcache2.HasherBase.hash`.
+        :param key: The key to hash.
+        :type key: str
         :returns: ServerConnection -- The server to use for the specified key.
         :raises: :py:exc:`~memcached2.NoAvailableServers`
         '''
@@ -521,7 +523,7 @@ class SelectorFirst(SelectorBase):
 
     If the server is down, an attempt to reconnect will be made.
     '''
-    def select(self, server_list, key_hash):
+    def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
@@ -561,7 +563,7 @@ class SelectorAvailableServers(SelectorBase):
         self.topological_flush = topological_flush
         self.old_topology = None
 
-    def select(self, server_list, key_hash):
+    def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
@@ -580,49 +582,56 @@ class SelectorAvailableServers(SelectorBase):
             if self.old_topology == up_server_list:
                 self.flush_all()
                 self.old_topology = up_server_list
-        return up_server_list[key_hash % len(up_server_list)]
+        return up_server_list[hasher(key) % len(up_server_list)]
 
 
-class SelectorRehashOnDownServer(SelectorBase):
-    '''Re-hash keyspace on down server among up servers.
+class SelectorRestirOnDownServer(SelectorBase):
+    '''On a down server, stir the hash and try again.
 
-    If a server goes down or comes back up, keys that normally would be placed
-    on other servers shouldn't be re-hashed.  This Selector hashes the keys
-    as normal, and only if the key resides on a server that is down does it
-    hash it against the servers that are up.
+    When a hash hits a server that is down, this will stir the hash and
+    try again.  This has the trait of Consistent Hashing that the load
+    for a down server is consistently re-mapped to another server, even
+    if servers leave and return to the load, without having to build a
+    (potentially large) table that maps the key-space to random server
+    locations.
 
-    The plus side is that the "circle" of servers as in Consistent Hashing
-    doesn't need to be created and searched, particularly if you have
-    short-running processes.
-
-    The down side is that if the population of down servers changes
-    frequently, the keys that map to down servers will get re-shuffled
-    on every topology change.
-
-    This is most suitable for large numbers of servers or servers that
-    rarely have topology changes.
+    Since it hunts somewhat randomly for another server, it could try
+    re-hashing numerous times, especially if the number of down servers
+    is very large.  So we restrict the number of retries before giving
+    up and just trying among the up servers.
 
     After a specified number of operations, and at the first operation, an
     attempt will be made to connect to any servers that are not currently
     up.
     '''
-    def __init__(self, reconnect_frequency=100, topological_flush=False):
+    def __init__(
+            self, reconnect_frequency=100, topological_flush=False,
+            retries_before_miss=None):
         '''
         :param reconnect_frequency: Every this many operations, attempt
             reconecting to all down servers.
         :type reconnect_frequency: int
         :param topological_flush: Flush all servers when the topology changes.
         :type topological_flush: boolean
+        :param retries_before_miss: Stirring of the hash will be tried this
+                many times before giving up.  In that case it rehashes
+                among the up servers.  The default is `None`, which means
+                the retry is set to the size of the server pool.
+        :type retries_before_miss: int
         '''
         self.reconnect_frequency = reconnect_frequency
         self.operations_to_next_reconnect = 0
         self.topological_flush = topological_flush
         self.old_topology = None
+        self.retries_before_miss = retries_before_miss
 
-    def select(self, server_list, key_hash):
+    def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
+        if not self.retries_before_miss:
+            self.retries_before_miss = len(server_list)
+
         if self.operations_to_next_reconnect < 1:
             self.operations_to_next_reconnect = self.reconnect_frequency
             for server in [x for x in server_list if not x.backend]:
@@ -631,9 +640,15 @@ class SelectorRehashOnDownServer(SelectorBase):
             self.operations_to_next_reconnect -= 1
 
         #  try across all servers
-        server = server_list[key_hash % len(server_list)]
-        if server.backend:
-            return server
+        original_hash = hasher(key)
+        current_hash = original_hash
+        for i in range(self.retries_before_miss):
+            server = server_list[current_hash % len(server_list)]
+            if server.backend:
+                return server
+
+            #  stir hash
+            current_hash = hasher(key + str(i))
 
         #  only try up servers
         up_server_list = [x for x in server_list if x.backend]
@@ -644,7 +659,7 @@ class SelectorRehashOnDownServer(SelectorBase):
             if self.old_topology == up_server_list:
                 self.flush_all()
                 self.old_topology = up_server_list
-        return up_server_list[key_hash % len(up_server_list)]
+        return up_server_list[original_hash % len(up_server_list)]
 
 
 class Memcache:
@@ -718,7 +733,7 @@ class Memcache:
             elif len(self.servers) == 2:
                 self.selector = SelectorAvailableServers()
             else:
-                self.selector = SelectorRehashOnDownServer()
+                self.selector = SelectorRestirOnDownServer()
 
     def __del__(self):
         self.close()
@@ -745,7 +760,7 @@ class Memcache:
         '''
         command = _to_bytes(command)
         if not server:
-            server = self.selector.select(self.servers, self.hasher.hash(key))
+            server = self.selector.select(self.servers, self.hasher.hash, key)
 
         try:
             server.send_command(command)
@@ -779,7 +794,7 @@ class Memcache:
         '''
         server_map = collections.defaultdict(list)
         for key in keys:
-            server = self.selector.select(self.servers, self.hasher.hash(key))
+            server = self.selector.select(self.servers, self.hasher.hash, key)
             server_map[server].append(key)
         return server_map.items()
 

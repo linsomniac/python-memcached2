@@ -1,6 +1,12 @@
 What's New in python-memcachee2
 *******************************
 
+Sun Jun 08, 2013
+
+  * Removed :py:class:`~memcached2.SelectorRehashOnDownServer` and replaced
+    it with the better
+    :py:class:`~memcached2.SelectorRestirOnDownServer`.
+
 Tue Jun 04, 2013
 
   * Fixing a bug if Memcache(selector+XXX) is used, hasher was not being
