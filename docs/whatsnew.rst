@@ -1,6 +1,12 @@
 What's New in python-memcachee2
 *******************************
 
+Sun Jun 10, 2013
+
+  * Tagging as 0.2 as the functionality here is usable and stabilized and I
+    want to start working on some significant changes that may break things
+    for a while.
+
 Sun Jun 09, 2013
 
   * Added :py:class:`~memcached2.SelectorConsistentHashing` that implements
