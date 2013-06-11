@@ -1,4 +1,4 @@
-What's New in python-memcachee2
+What's New in python-memcached2
 *******************************
 
 Mon Jun 10, 2013
