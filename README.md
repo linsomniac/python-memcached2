@@ -7,12 +7,13 @@ well.
 
 **I am looking for feedback on this module, its design and architecture.**
 
-**2013-05-08**: MemcacheValue is now called ValueSuperStr, and it is no
-longer the default return type in Memcache().  It can be defined by passing
-ValueMemcache to Memcache() as the "value_wrapper".  There's also a
-ValueDictionary now.
+**2013-06-10**: I continue to plug along a bit at a time.  I've tagged
+release-0.2, because I want to start making some changes to the server
+connection code as part of the connection pooling work.  So things may be
+unstable over the next couple of weeks.
 
-These "What's new" dated entries are now recorded in the "WHATSNEW" file.
+These "What's new" dated entries are now recorded in the
+"[docs/whatsnew.rst](https://python-memcached2.readthedocs.org/en/latest/whatsnew.html)" file.
 
 Example
 -------
