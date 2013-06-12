@@ -586,81 +586,51 @@ class SelectorAvailableServers(SelectorBase):
         return up_server_list[hasher(key) % len(up_server_list)]
 
 
-class SelectorRestirOnDownServer(SelectorBase):
-    '''On a down server, stir the hash and try again.
+class SelectorFractalHasher(SelectorBase):
+    '''On a down server, re-partition that servers keyspace to other servers.
 
-    When a hash hits a server that is down, this will stir the hash and
-    try again.  This has the trait of Consistent Hashing that the load
-    for a down server is consistently re-mapped to another server, even
-    if servers leave and return to the load, without having to build a
-    (potentially large) table that maps the key-space to random server
-    locations.
+    This uses an algorithm that basically maps every key in the keyspace to
+    a list of the servers that will answer queries for it.  The first
+    available server in that list will be used.  The list is such that
+    the keys that map to a server when it is up will get distributed across
+    other servers evenly, stabally, and predictably.
 
-    Since it hunts somewhat randomly for another server, it could try
-    re-hashing numerous times, especially if the number of down servers
-    is very large.  So we restrict the number of retries before giving
-    up and just trying among the up servers.
+    I called it Fractal because when a server is down you dig deeper and see a
+    new level of complexity in the keyspace mapping.
 
     After a specified number of operations, and at the first operation, an
     attempt will be made to connect to any servers that are not currently
     up.
     '''
-    def __init__(
-            self, reconnect_frequency=100, topological_flush=False,
-            retries_before_miss=None):
+    def __init__(self, topological_flush=False):
         '''
-        :param reconnect_frequency: Every this many operations, attempt
-            reconecting to all down servers.
-        :type reconnect_frequency: int
         :param topological_flush: Flush all servers when the topology changes.
         :type topological_flush: boolean
-        :param retries_before_miss: Stirring of the hash will be tried this
-                many times before giving up.  In that case it rehashes
-                among the up servers.  The default is `None`, which means
-                the retry is set to the size of the server pool.
-        :type retries_before_miss: int
         '''
-        self.reconnect_frequency = reconnect_frequency
-        self.operations_to_next_reconnect = 0
         self.topological_flush = topological_flush
-        self.old_topology = None
-        self.retries_before_miss = retries_before_miss
 
     def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
-        if not self.retries_before_miss:
-            self.retries_before_miss = len(server_list)
-
-        if self.operations_to_next_reconnect < 1:
-            self.operations_to_next_reconnect = self.reconnect_frequency
-            for server in [x for x in server_list if not x.backend]:
-                server.connect()
-        else:
-            self.operations_to_next_reconnect -= 1
-
-        #  try across all servers
         original_hash = hasher(key)
         current_hash = original_hash
-        for i in range(self.retries_before_miss):
-            server = server_list[current_hash % len(server_list)]
+        orig_server_list = server_list    # makes code a bit clearer
+        for i in range(len(orig_server_list)):
+            position = current_hash % len(server_list)
+            server = server_list[position]
+            if not server.backend:
+                server.connect()
+                if self.topological_flush and server.backend:
+                    self.flush_all()
             if server.backend:
                 return server
 
-            #  stir hash
+            #  restir hash and look among remiaining servers
+            if i == 0:
+                server_list = server_list[:]
+            del(server_list[position])
             current_hash = hasher(key + str(i))
-
-        #  only try up servers
-        up_server_list = [x for x in server_list if x.backend]
-        if not up_server_list:
-            raise NoAvailableServers()
-
-        if self.topological_flush:
-            if self.old_topology == up_server_list:
-                self.flush_all()
-                self.old_topology = up_server_list
-        return up_server_list[original_hash % len(up_server_list)]
 
 
 class SelectorConsistentHashing(SelectorBase):
@@ -823,7 +793,7 @@ class Memcache:
             elif len(self.servers) == 2:
                 self.selector = SelectorAvailableServers()
             else:
-                self.selector = SelectorRestirOnDownServer()
+                self.selector = SelectorFractalHasher()
 
     def __del__(self):
         self.close()

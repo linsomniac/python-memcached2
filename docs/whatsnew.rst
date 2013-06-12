@@ -1,6 +1,15 @@
 What's New in python-memcached2
 *******************************
 
+Mon Jun 12, 2013
+
+  * Added a new Selector,
+    :py:class:`~memcached2.SelectorFractalHasher`,
+    and removed the
+    :py:class:`~memcached2.SelectorRestirOnDownServer`.
+    The new Selector improves on the old one in pretty much every way, and
+    is the default for when more than 2 servers are listed.
+
 Mon Jun 10, 2013
 
   * Tagging as 0.2 as the functionality here is usable and stabilized and I
