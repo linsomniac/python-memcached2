@@ -45,7 +45,8 @@ import collections
 from bisect import bisect
 
 PY3 = sys.version > '3'
-if not PY3:
+PY33 = sys.version > '3.3'
+if not PY33:
     ConnectionResetError = socket.error
 
     class BrokenPipeError(Exception):
@@ -586,7 +587,7 @@ class SelectorAvailableServers(SelectorBase):
         return up_server_list[hasher(key) % len(up_server_list)]
 
 
-class SelectorFractalHasher(SelectorBase):
+class SelectorFractalSharding(SelectorBase):
     '''On a down server, re-partition that servers keyspace to other servers.
 
     This uses an algorithm that basically maps every key in the keyspace to
@@ -793,7 +794,7 @@ class Memcache:
             elif len(self.servers) == 2:
                 self.selector = SelectorAvailableServers()
             else:
-                self.selector = SelectorFractalHasher()
+                self.selector = SelectorFractalSharding()
 
     def __del__(self):
         self.close()

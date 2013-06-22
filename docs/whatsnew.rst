@@ -4,7 +4,7 @@ What's New in python-memcached2
 Mon Jun 12, 2013
 
   * Added a new Selector,
-    :py:class:`~memcached2.SelectorFractalHasher`,
+    :py:class:`~memcached2.SelectorFractalSharding`,
     and removed the
     :py:class:`~memcached2.SelectorRestirOnDownServer`.
     The new Selector improves on the old one in pretty much every way, and

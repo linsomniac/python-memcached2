@@ -14,15 +14,20 @@
 
 TESTS = $(wildcard test_*.py)
 
-all.PHONY: test test3
+all.PHONY: test test32 test33
 
 test:
 	@- $(foreach TEST,$(TESTS), \
 		echo === Running python2 test: $(TEST); \
 		python $(TEST); \
 		)
-test3:
+test32:
 	@- $(foreach TEST,$(TESTS), \
 		echo === Running python3 test: $(TEST); \
-		python3 $(TEST); \
+		python3.2 $(TEST); \
+		)
+test33:
+	@- $(foreach TEST,$(TESTS), \
+		echo === Running python3 test: $(TEST); \
+		python3.3 $(TEST); \
 		)
