@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 from setuptools import setup
-import memcache2
+import memcached2
 
 setup(name='python-memcached',
-      version=memcache2.__version__,
+      version=memcached2.__version__,
       description='Pure python memcached client',
       long_description=open('README.md').read(),
       author='Sean Reifschneider',
@@ -13,7 +13,7 @@ setup(name='python-memcached',
       maintainer_email='jafo@tummy.com',
       url='http://www.tummy.com/Community/software/python-memcached2/',
       download_url='ftp://ftp.tummy.com/pub/python-memcached2/',
-      py_modules=['memcache2'],
+      py_modules=['memcached2'],
       classifiers=[
         #'Development Status :: 5 - Production/Stable',
         'Development Status :: 3 - Alpha',
