@@ -39,6 +39,7 @@ Bugs/patches/code: https://github.com/linsomniac/python-memcached2
 
 import re
 import socket
+import select
 import sys
 from binascii import crc32
 import collections
@@ -989,7 +990,7 @@ class Memcache:
             the :py:func:`~memcached2.Memcache.get` call.
         :type cas_unique: int (64 bits)
         '''
-        if cas_unique:
+        if cas_unique is None:
             command = 'cas {0} {1} {2} {3} {4}\r\n'.format(
                     key, flags, exptime, len(value),
                     cas_unique) + value + '\r\n'
@@ -997,6 +998,95 @@ class Memcache:
             command = 'set {0} {1} {2} {3}\r\n'.format(
                     key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
+
+    def set_multi(self, data, options={}):
+        '''Set many key/value pairs at once.
+        This produces pipelining of the multiple set operations, to get
+        maximum performance.
+
+        :param data: A list of (key,value) pairs, for example as produced
+                by dict.items().  Optionally, a third element may be a
+                dictionary containing the options for this key, as in the
+                `options` argument.
+        :type data: list of tuples
+        :param options: Default options for all keys set, a dictionary with
+                keys: 'flags', 'exptime', and 'cas_unique'.  See
+                :py:func:`~memcached2.Memcache.set` for descriptions of these
+                items.
+        :type options: dict
+        '''
+        def server_interaction(
+                output_buffers, send_threshold, send_minimum, results):
+            read_sockets = output_buffers.keys()
+            write_sockets = [x[0] for x in output_buffers if len(x[1])]
+
+            #  pick only the sockets that are above the threshold
+            if send_threshold:
+                write_sockets = (
+                        [key for key, value in write_sockets.items()
+                            if len(value) >= send_minimum]
+                        if max([len(x) for x in write_sockets.x()])
+                            >= send_threshold
+                        else [])
+
+            read_ready, write_ready = select.select(
+                    read_sockets, write_sockets, [])[:2]
+
+            #  send data to read-ready sockets
+            raise NotImplementedError()
+            #  receive data from write-ready sockets
+            raise NotImplementedError()
+
+        output_buffers = {}
+        expected_keys = {}
+        results = {}
+        nonblocking_servers = set()
+        send_threshold = 180224
+        send_minimum = send_threshold
+
+        base_options = {
+                'flags': 0,
+                'exptime': 0,
+                'cas_unique': None}.update(options)
+
+        for to_send in data:
+            #  set up
+            key = to_send[0]
+            value = to_send[1]
+            if len(data) == 2:
+                options = base_options
+            else:
+                options = base_options.copy().update(data[2])
+
+            #  find server for command
+            server = self.selector.select(self.servers, self.hasher.hash, key)
+            if not server in nonblocking_servers:
+                nonblocking_servers.add(server)
+                server.setblocking(False)
+                output_buffers[server] = bytearray()
+                expected_keys[server] = {}
+
+            #  add command to output buffer
+            output_buffer = output_buffers[server]
+            expected_keys[server].append(key)
+            if options['cas_unique'] is None:
+                output_buffer.append('cas {0} {1} {2} {3} {4}\r\n'.format(
+                        key, options['flags'], options['exptime'], len(value),
+                        options['cas_unique']) + value + '\r\n')
+            else:
+                output_buffer.append('set {0} {1} {2} {3}\r\n'.format(
+                        key, options['flags'], options['exptime'],
+                        len(value)) + value + '\r\n')
+
+            #  send data and read any ready data
+            server_interaction(
+                    output_buffers, send_threshold, send_minimum, results)
+
+        #  complete interaction with servers
+        server_interaction(output_buffers, 0, 0, results)
+
+        for server in nonblocking_servers.keys():
+            server.setblocking = True
 
     def cache(self, key, function, *args, **kwargs):
         '''Cached wrapper around function.
@@ -1681,6 +1771,7 @@ class ServerConnection:
         self.parsed_uri = self.parse_uri()
         self.backend = None
         self.buffer_readsize = 10000
+        self.is_blocking = True
         self.reset()
 
     def reset(self):
@@ -1754,6 +1845,8 @@ class ServerConnection:
             self.backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.backend.connect(
                     (self.parsed_uri['host'], self.parsed_uri['port']))
+            if not self.backend.setblocking:
+                self.backend.setblocking(self.is_blocking)
             return
 
         raise UnknownProtocol(
@@ -1833,6 +1926,17 @@ class ServerConnection:
             self.buffer += data
 
         return self.consume_from_buffer(length)
+
+    def setblocking(self, blocking):
+        '''Set the socket to blocking or non-blocking mode.
+
+        :param blocking: If `True`, the socket is set to blocking operation,
+                otherwise it is set to non-blocking.
+        :type blocking: boolean
+        '''
+        self.is_blocking = blocking
+        if self.backend:
+            self.backend.setblocking(blocking)
 
     def __repr__(self):
         return '<ServerConnection to {0}>'.format(self.uri)
