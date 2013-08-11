@@ -60,7 +60,7 @@ def _from_bytes(data):
     if PY3:
         if isinstance(data, str):
             return data
-        return str(data, 'latin-1')
+        return str(data, 'ascii')
     return str(data)
 
 
@@ -69,7 +69,7 @@ def _to_bytes(data):
     if PY3:
         if isinstance(data, bytes):
             return data
-        return bytes(data, 'latin-1')
+        return bytes(data, 'ascii')
     return data
 
 
@@ -1657,8 +1657,8 @@ class ServerConnection:
     '''Low-level communication with the memcached server.
 
     Data should be passed in as strings, and that is converted to `bytes`
-    for sending to the backend, encoded as Latin1, if necessary.  Data
-    returned is likewise converted from `bytes`, also encoded as Latin1,
+    for sending to the backend, encoded as ASCII, if necessary.  Data
+    returned is likewise converted from `bytes`, also encoded as ASCII,
     if necessary.
 
     This implments the connection to a server, sending messages and reading
@@ -1761,10 +1761,10 @@ class ServerConnection:
                 .format(self.parsed_uri['protocol']))
 
     def send_command(self, command):
-        '''Write an Latin1 command to the memcached server.
+        '''Write an ASCII command to the memcached server.
 
         :param command: Data that is sent to the server.  This is converted
-            to a `bytes` type with Latin1 encoding if necessary for sending
+            to a `bytes` type with ASCII encoding if necessary for sending
             across the socket.
         :type command: str
 
@@ -1788,7 +1788,7 @@ class ServerConnection:
         :type search: str
 
         :returns: str -- Data read, up to and including `search`.  Converted
-            from `bytes` (as read from backend) with Latin1 encoding, if
+            from `bytes` (as read from backend) with ASCII encoding, if
             necessary.
         :raises: :py:exc:`~memcached2.ServerDisconnect`
         '''
@@ -1820,7 +1820,7 @@ class ServerConnection:
         :type length: int
 
         :returns: str -- Data read from socket.  Converted from `bytes`
-            (as read from backend) with Latin1 encoding, if necessary.
+            (as read from backend) with ASCII encoding, if necessary.
         :raises: :py:exc:`~memcached2.ServerDisconnect`
         '''
         while len(self.buffer) < length:
