@@ -1016,7 +1016,7 @@ class Memcache:
         :type options: dict
         '''
         def server_interaction(
-                output_buffers, send_threshold, send_minimum, results):
+                server_buffers, send_threshold, send_minimum, results):
             read_sockets = output_buffers.keys()
             write_sockets = [x[0] for x in output_buffers if len(x[1])]
 
@@ -1033,9 +1033,20 @@ class Memcache:
                     read_sockets, write_sockets, [])[:2]
 
             #  send data to read-ready sockets
-            raise NotImplementedError()
+            for server in write_ready:
+                data = server_buffers[server]
+                bytes_sent = server.backend.send(data)
+                if bytes_sent == len(data):
+                    del server_buffers[server]
+                else:
+                    del data[:bytes_sent]
+
             #  receive data from write-ready sockets
-            raise NotImplementedError()
+            for server in read_ready:
+                server.read_from_socket()
+
+        #  What now? @@@
+        raise NotImplementedError()
 
         output_buffers = {}
         expected_keys = {}
@@ -1896,15 +1907,22 @@ class ServerConnection:
                 else:
                     start = max(0, len(self.buffer) - search_len)
 
-            try:
-                data = _from_bytes(self.backend.recv(self.buffer_readsize))
-            except ConnectionResetError:
-                raise ServerDisconnect('ConnectionResetError')
-            except BrokenPipeError:
-                raise ServerDisconnect('BrokenPipeError')
-            if not data:
-                raise ServerDisconnect('Zero-length read in read_until()')
-            self.buffer += data
+            self.read_from_socket()
+
+    def read_from_socket(self):
+        '''Read data from the socket, storing into buffer.
+
+        A single read operation from the socket, storing data into the buffer.
+        '''
+        try:
+            data = _from_bytes(self.backend.recv(self.buffer_readsize))
+        except ConnectionResetError:
+            raise ServerDisconnect('ConnectionResetError')
+        except BrokenPipeError:
+            raise ServerDisconnect('BrokenPipeError')
+        if not data:
+            raise ServerDisconnect('Zero-length read in read_until()')
+        self.buffer += data
 
     def read_length(self, length):
         '''Read the specified number of bytes.
