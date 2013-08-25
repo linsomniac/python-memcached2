@@ -1016,9 +1016,13 @@ class Memcache:
         :type options: dict
         '''
         def server_interaction(
-                server_buffers, send_threshold, send_minimum, results):
-            read_sockets = output_buffers.keys()
-            write_sockets = [x[0] for x in output_buffers if len(x[1])]
+                server_buffers, send_threshold, send_minimum,
+                expected_keys, results):
+            '''Write and read to sockets that are ready.
+            '''
+
+            read_sockets = server_buffers.keys()
+            read_sockets = [x[0] for x in server_buffers if len(x[1])]
 
             #  pick only the sockets that are above the threshold
             if send_threshold:
@@ -1032,7 +1036,7 @@ class Memcache:
             read_ready, write_ready = select.select(
                     read_sockets, write_sockets, [])[:2]
 
-            #  send data to read-ready sockets
+            #  send data to write-ready sockets
             for server in write_ready:
                 data = server_buffers[server]
                 bytes_sent = server.backend.send(data)
@@ -1041,12 +1045,14 @@ class Memcache:
                 else:
                     del data[:bytes_sent]
 
-            #  receive data from write-ready sockets
+            #  receive data from read-ready sockets
             for server in read_ready:
                 server.read_from_socket()
 
-        #  What now? @@@
-        raise NotImplementedError()
+        def dictionary_values_empty(d):
+            '''Return the values in the dictionary that are not false.
+            '''
+            return [x for x in d.values() if x]
 
         output_buffers = {}
         expected_keys = {}
@@ -1075,7 +1081,7 @@ class Memcache:
                 nonblocking_servers.add(server)
                 server.setblocking(False)
                 output_buffers[server] = bytearray()
-                expected_keys[server] = {}
+                expected_keys[server] = []
 
             #  add command to output buffer
             output_buffer = output_buffers[server]
@@ -1091,13 +1097,16 @@ class Memcache:
 
             #  send data and read any ready data
             server_interaction(
-                    output_buffers, send_threshold, send_minimum, results)
+                    output_buffers, send_threshold, send_minimum,
+                    expected_keys, results)
 
         #  complete interaction with servers
-        server_interaction(output_buffers, 0, 0, results)
+        while (dictionary_values_empty(output_buffers)
+                or dictionary_values_empty(expected_keys)):
+            server_interaction(output_buffers, 0, 0, expected_keys, results)
 
         for server in nonblocking_servers.keys():
-            server.setblocking = True
+            server.setblocking(True)
 
     def cache(self, key, function, *args, **kwargs):
         '''Cached wrapper around function.
