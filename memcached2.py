@@ -1014,17 +1014,21 @@ class Memcache:
                 :py:func:`~memcached2.Memcache.set` for descriptions of these
                 items.
         :type options: dict
+        :returns: dict -- Dictionary of keys that were sent and the server
+                status of that set operation.
         '''
         def server_interaction(
                 server_buffers, send_threshold, send_minimum,
                 expected_keys, results):
             '''Write and read to sockets that are ready.
             '''
+            read_sockets = [x for x in server_buffers.keys() if x is not None]
 
-            read_sockets = server_buffers.keys()
-            read_sockets = [x[0] for x in server_buffers if len(x[1])]
+            write_sockets = [
+                    x[0] for x in server_buffers
+                    if x[0] is not None or len(x[1])]
 
-            #  pick only the sockets that are above the threshold
+            #  pick only the write sockets that are above the threshold
             if send_threshold:
                 write_sockets = (
                         [key for key, value in write_sockets.items()
@@ -1048,6 +1052,11 @@ class Memcache:
             #  receive data from read-ready sockets
             for server in read_ready:
                 server.read_from_socket()
+
+                while server.line_available():
+                    line = server.read_until()
+                    key = expected_keys[server].pop(0)
+                    results[key] = line.rstrip()
 
         def dictionary_values_empty(d):
             '''Return the values in the dictionary that are not false.
@@ -1107,6 +1116,8 @@ class Memcache:
 
         for server in nonblocking_servers.keys():
             server.setblocking(True)
+
+        return results
 
     def cache(self, key, function, *args, **kwargs):
         '''Cached wrapper around function.
@@ -1891,6 +1902,13 @@ class ServerConnection:
         except BrokenPipeError:
             raise ServerDisconnect('BrokenPipeError')
 
+    def line_available(self):
+        '''Is a line (including termination) available in the server buffer?
+
+        :returns: boolean -- Is a line of data available in the server buffer?
+        '''
+        return '\r\n' in self.buffer
+
     def read_until(self, search='\r\n'):
         '''Read data from the server until "search" is found.
 
@@ -1965,6 +1983,15 @@ class ServerConnection:
         self.is_blocking = blocking
         if self.backend:
             self.backend.setblocking(blocking)
+
+    def fileno(self):
+        '''Return the socket file descriptor.
+
+        :returns: int -- File descriptor of the associated socket.
+        '''
+        if not self.backend:
+            return None
+        return self.backend.fileno()
 
     def __repr__(self):
         return '<ServerConnection to {0}>'.format(self.uri)
