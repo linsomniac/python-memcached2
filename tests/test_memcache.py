@@ -396,6 +396,19 @@ class test_Memcache(unittest.TestCase):
             self.assertIn(str(i), data)
         self.assertEqual(len(data), 10)
 
+    def test_SetMulti(self):
+        memcache = memcached2.Memcache((
+                'memcached://localhost/', 'memcached://localhost/'))
+        memcache.flush_all()
+
+        for i in range(10):
+            memcache.set(str(i), '*' * i)
+
+        data = memcache.get_multi(map(str, range(10)))
+        for i in range(10):
+            self.assertIn(str(i), data)
+        self.assertEqual(len(data), 10)
+
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((
                 'memcached://localhost/', 'memcached://localhost/',))

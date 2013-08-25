@@ -987,8 +987,8 @@ class Memcache:
         send a request for all the specified keys that are on that server
         as a single request.  All the results are correlated and returned.
 
-        :param key: The key to lookup in the memcache server.
-        :type key: list of str
+        :param keys: The keys to lookup in the memcache server.
+        :type keys: list of str
         :param get_cas: If True, the "cas unique" is queried and the return
             object has the "cas_unique" attribute set.
         :type get_cas: bool
