@@ -871,7 +871,7 @@ class Memcache:
                 was received.
         :raises: :py:exc:`NotImplementedError`
         '''
-        data = server.read_until('\r\n')
+        data = server.read_until()
         if data == 'END\r\n':
             return None, None
 
@@ -891,7 +891,7 @@ class Memcache:
         else:
             cas_unique = None
 
-        data = server.read_until('\r\n')   # trailing termination
+        data = server.read_until()   # trailing termination
         if data != '\r\n':
             raise NotImplementedError(
                     'Unexpected response when looking for terminator: {0}'
@@ -925,7 +925,7 @@ class Memcache:
         if key is None:
             raise NoValue()
 
-        data = server.read_until('\r\n')
+        data = server.read_until()
         if data != 'END\r\n':
             raise NotImplementedError(
                     'Unknown response: {0}'.format(repr(data[:30])))
@@ -1211,7 +1211,7 @@ class Memcache:
 
         server = self._send_command(command, key)
 
-        data = server.read_until('\r\n')
+        data = server.read_until()
 
         if data == 'DELETED\r\n':
             return True
@@ -1241,7 +1241,7 @@ class Memcache:
         for server in [x for x in self.servers if x.backend]:
             self._send_command(command, server=server)
 
-            data = server.read_until('\r\n')
+            data = server.read_until()
 
             if data == 'DELETED\r\n':
                 found_key = True
@@ -1270,7 +1270,7 @@ class Memcache:
         command = 'touch {0} {1}\r\n'.format(key, exptime)
 
         server = self._send_command(command, key)
-        data = server.read_until('\r\n')
+        data = server.read_until()
 
         if data == 'TOUCHED\r\n':
             return
@@ -1300,7 +1300,7 @@ class Memcache:
         self._reconnect_all()
         for server in [x for x in self.servers if x.backend]:
             server.send_command(command)
-            data = server.read_until('\r\n')
+            data = server.read_until()
 
             if data != 'OK\r\n':
                 raise NotImplementedError(
@@ -1357,7 +1357,7 @@ class Memcache:
             server.send_command(command)
             stats = {}
             while True:
-                data = _from_bytes(server.read_until('\r\n'))
+                data = _from_bytes(server.read_until())
                 if data == 'END\r\n':
                     break
                 prefix, key, value = data.strip().split()
@@ -1418,7 +1418,7 @@ class Memcache:
             server.send_command(command)
             stats = {}
             while True:
-                data = _from_bytes(server.read_until('\r\n'))
+                data = _from_bytes(server.read_until())
                 if data == 'END\r\n':
                     break
                 prefix, key, value = data.strip().split()
@@ -1474,7 +1474,7 @@ class Memcache:
             server.send_command(command)
             stats = {'slabs': {}}
             while True:
-                data = _from_bytes(server.read_until('\r\n'))
+                data = _from_bytes(server.read_until())
                 if data == 'END\r\n':
                     break
                 prefix, key, value = data.strip().split()
@@ -1532,7 +1532,7 @@ class Memcache:
             server.send_command(command)
             stats = {}
             while True:
-                data = _from_bytes(server.read_until('\r\n'))
+                data = _from_bytes(server.read_until())
                 if data == 'END\r\n':
                     break
                 prefix, key, value = data.strip().split()
@@ -1593,7 +1593,7 @@ class Memcache:
             server.send_command(command)
             stats = []
             while True:
-                data = _from_bytes(server.read_until('\r\n'))
+                data = _from_bytes(server.read_until())
                 if data == 'END\r\n':
                     break
                 prefix, key, value = data.strip().split()
@@ -1650,7 +1650,7 @@ class Memcache:
             :py:exc:`~memcached2.NoAvailableServers`
         '''
         server = self._send_command(command, key)
-        data = server.read_until('\r\n')
+        data = server.read_until()
 
         #  <NEW_VALUE>\r\n
         if data[0] in '0123456789':
@@ -1682,7 +1682,7 @@ class Memcache:
         '''
         server = self._send_command(command, key)
 
-        data = server.read_until('\r\n')
+        data = server.read_until()
 
         if data == 'STORED\r\n':
             return
@@ -1891,13 +1891,14 @@ class ServerConnection:
         except BrokenPipeError:
             raise ServerDisconnect('BrokenPipeError')
 
-    def read_until(self, search):
+    def read_until(self, search='\r\n'):
         '''Read data from the server until "search" is found.
 
         Data is read in blocks, any remaining data beyond `search` is held
         in a buffer to be consumed in the future.
 
         :param search: Read data from the server until `search` is found.
+                This defaults to '\r\n', so it acts like readline().
         :type search: str
 
         :returns: str -- Data read, up to and including `search`.  Converted
