@@ -1038,7 +1038,7 @@ class Memcache:
             the :py:func:`~memcached2.Memcache.get` call.
         :type cas_unique: int (64 bits)
         '''
-        if cas_unique is None:
+        if cas_unique is not None:
             command = 'cas {0} {1} {2} {3} {4}\r\n'.format(
                     key, flags, exptime, len(value),
                     cas_unique) + value + '\r\n'
@@ -1695,7 +1695,6 @@ class Memcache:
             :py:exc:`~memcached2.NoAvailableServers`
         '''
         server = self._send_command(command, key)
-
         data = server.read_until()
 
         if data == 'STORED\r\n':
