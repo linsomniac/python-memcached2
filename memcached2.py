@@ -85,45 +85,33 @@ def _to_bool(s):
 
 
 def _server_interaction(
-        server_buffers, send_threshold, send_minimum,
+        buffers_by_server, send_threshold, send_minimum,
         expected_keys, results):
     '''Write and read to sockets that are ready.
     '''
-    read_sockets = [x for x in server_buffers.keys() if x is not None]
+    read_sockets = [x for x in buffers_by_server.keys() if x.backend]
 
     write_sockets = [
-            x[0] for x in server_buffers
-            if x[0] is not None or len(x[1])]
-
-    #  pick only the write sockets that are above the threshold
-    if send_threshold:
-        write_sockets = (
-                [key for key, value in write_sockets.items()
-                    if len(value) >= send_minimum]
-                if max([len(x) for x in write_sockets.x()])
-                    >= send_threshold
-                else [])
+            x[0] for x in buffers_by_server.items()
+            if not send_threshold or len(x[1]) >= send_threshold]
 
     read_ready, write_ready = select.select(
             read_sockets, write_sockets, [])[:2]
-
-    #  send data to write-ready sockets
-    for server in write_ready:
-        data = server_buffers[server]
-        bytes_sent = server.backend.send(data)
-        if bytes_sent == len(data):
-            del server_buffers[server]
-        else:
-            del data[:bytes_sent]
 
     #  receive data from read-ready sockets
     for server in read_ready:
         server.read_from_socket()
 
-        while server.line_available():
+        while server.line_available() and expected_keys[server]:
             line = server.read_until()
             key = expected_keys[server].pop(0)
             results[key] = line.rstrip()
+
+    #  send data to write-ready sockets
+    for server in write_ready:
+        data = buffers_by_server[server]
+        bytes_sent = server.backend.send(data)
+        del data[:bytes_sent]
 
 
 def _dictionary_values_empty(d):
@@ -1076,16 +1064,18 @@ class Memcache:
         base_options = {
                 'flags': 0,
                 'exptime': 0,
-                'cas_unique': None}.update(options)
+                'cas_unique': None}
+        base_options.update(options)
 
         for to_send in data:
             #  set up
             key = to_send[0]
             value = to_send[1]
-            if len(data) == 2:
-                options = base_options
+            if len(to_send) == 2:
+                key_options = base_options
             else:
-                options = base_options.copy().update(data[2])
+                key_options = base_options.copy()
+                base_options.update(to_send[2])
 
             #  find server for command
             server = self.selector.select(self.servers, self.hasher.hash, key)
@@ -1098,26 +1088,31 @@ class Memcache:
             #  add command to output buffer
             output_buffer = output_buffers[server]
             expected_keys[server].append(key)
-            if options['cas_unique'] is None:
-                output_buffer.append('cas {0} {1} {2} {3} {4}\r\n'.format(
-                        key, options['flags'], options['exptime'], len(value),
-                        options['cas_unique']) + value + '\r\n')
+            if key_options['cas_unique'] is not None:
+                output_buffer.extend('cas {0} {1} {2} {3} {4}\r\n'.format(
+                        key, key_options['flags'], key_options['exptime'],
+                        len(value),
+                        key_options['cas_unique']))
+                output_buffer.extend(value + '\r\n')
             else:
-                output_buffer.append('set {0} {1} {2} {3}\r\n'.format(
-                        key, options['flags'], options['exptime'],
+                output_buffer.extend('set {0} {1} {2} {3}\r\n'.format(
+                        key, key_options['flags'], key_options['exptime'],
                         len(value)) + value + '\r\n')
 
             #  send data and read any ready data
-            _server_interaction(
-                    output_buffers, send_threshold, send_minimum,
-                    expected_keys, results)
+            if [
+                    x for x in output_buffers.values()
+                    if len(x) >= send_threshold]:
+                _server_interaction(
+                        output_buffers, send_threshold, send_minimum,
+                        expected_keys, results)
 
         #  complete interaction with servers
         while (_dictionary_values_empty(output_buffers)
                 or _dictionary_values_empty(expected_keys)):
             _server_interaction(output_buffers, 0, 0, expected_keys, results)
 
-        for server in nonblocking_servers.keys():
+        for server in nonblocking_servers:
             server.setblocking(True)
 
         return results

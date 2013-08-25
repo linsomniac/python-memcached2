@@ -401,13 +401,13 @@ class test_Memcache(unittest.TestCase):
                 'memcached://localhost/', 'memcached://localhost/'))
         memcache.flush_all()
 
+        data = []
         for i in range(10):
-            memcache.set(str(i), '*' * i)
+            data.append(('key{0}'.format(i), '!' * i))
 
-        data = memcache.get_multi(map(str, range(10)))
-        for i in range(10):
-            self.assertIn(str(i), data)
-        self.assertEqual(len(data), 10)
+        results = memcache.set_multi(data)  # NOQA
+        for key, value in data:
+            self.assertEqual(memcache.get(key), value)
 
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((
