@@ -31,7 +31,7 @@ import memcached2
 import time
 
 
-class test_ServerConnection(unittest.TestCase):
+class test_Memcache(unittest.TestCase):
     def setUp(self):
         mctestsupp.flush_local_memcache(self)
 

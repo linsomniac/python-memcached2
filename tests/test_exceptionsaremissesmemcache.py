@@ -30,7 +30,7 @@ import memcached2
 from faketcpserver import RECEIVE, CommandServer
 
 
-class test_ServerConnection(unittest.TestCase):
+class test_ExceptionsAreMissesMemcache(unittest.TestCase):
     def setUp(self):
         mctestsupp.flush_local_memcache(self)
 
