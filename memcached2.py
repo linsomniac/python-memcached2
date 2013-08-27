@@ -61,7 +61,7 @@ def _from_bytes(data):
     if PY3:
         if isinstance(data, str):
             return data
-        return str(data, 'ascii')
+        return str(data, 'latin-1')
     return str(data)
 
 
@@ -70,7 +70,7 @@ def _to_bytes(data):
     if PY3:
         if isinstance(data, bytes):
             return data
-        return bytes(data, 'ascii')
+        return bytes(data, 'latin-1')
     return data
 
 
@@ -1089,15 +1089,18 @@ class Memcache:
             output_buffer = output_buffers[server]
             expected_keys[server].append(key)
             if key_options['cas_unique'] is not None:
-                output_buffer.extend('cas {0} {1} {2} {3} {4}\r\n'.format(
+                output_buffer.extend(_to_bytes(
+                        'cas {0} {1} {2} {3} {4}\r\n'.format(
                         key, key_options['flags'], key_options['exptime'],
                         len(value),
-                        key_options['cas_unique']))
-                output_buffer.extend(value + '\r\n')
+                        key_options['cas_unique'])))
             else:
-                output_buffer.extend('set {0} {1} {2} {3}\r\n'.format(
+                output_buffer.extend(_to_bytes(
+                        'set {0} {1} {2} {3}\r\n'.format(
                         key, key_options['flags'], key_options['exptime'],
-                        len(value)) + value + '\r\n')
+                        len(value))))
+            output_buffer.extend(_to_bytes(value))
+            output_buffer.extend(_to_bytes('\r\n'))
 
             #  send data and read any ready data
             if [
