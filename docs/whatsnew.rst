@@ -1,6 +1,12 @@
 What's New in python-memcached2
 *******************************
 
+Mon Aug 26, 2013
+
+  * I have completed the implementation of send_multi() and it passes a
+    basic test.  Need to decide what I want the return to be, and do more
+    tests, but it's on its way.
+
 Mon Jun 12, 2013
 
   * Added a new Selector,
