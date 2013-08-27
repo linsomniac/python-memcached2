@@ -7,6 +7,9 @@ well.
 
 **I am looking for feedback on this module, its design and architecture.**
 
+**2013-08-26**: I've been distracted with a new job, but have gotten
+`set_multi()` working, which was one of the few big things left.
+
 **2013-06-10**: I continue to plug along a bit at a time.  I've tagged
 release-0.2, because I want to start making some changes to the server
 connection code as part of the connection pooling work.  So things may be
