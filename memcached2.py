@@ -87,7 +87,11 @@ def _to_bool(s):
 def _server_interaction(
         buffers_by_server, send_threshold, send_minimum,
         expected_keys, results):
-    '''Write and read to sockets that are ready.
+    '''INTERNAL: Write and read to sockets that are ready.
+
+    This is used by the :py:func:`~memcached2.Memcache.set_multi` code to
+    interact with the server when buffers overflow or to finish sending and
+    receiving data.
     '''
     read_sockets = [x for x in buffers_by_server.keys() if x.backend]
 
@@ -115,7 +119,7 @@ def _server_interaction(
 
 
 def _dictionary_values_empty(d):
-    '''Return the values in the dictionary that are not false.
+    '''INTERNAL: Return the values in the dictionary that are not false.
     '''
     return [x for x in d.values() if x]
 
