@@ -107,9 +107,9 @@ def _server_interaction(
         server.read_from_socket()
 
         while server.line_available() and expected_keys[server]:
-            line = server.read_until()
+            line = server.read_until().rstrip()
             key = expected_keys[server].pop(0)
-            results[key] = line.rstrip()
+            results[key] = (line if line != 'STORED' else None)
 
     #  send data to write-ready sockets
     for server in write_ready:
@@ -1054,8 +1054,8 @@ class Memcache:
                 :py:func:`~memcached2.Memcache.set` for descriptions of these
                 items.
         :type options: dict
-        :returns: dict -- Dictionary of keys that were sent and the server
-                status of that set operation.
+        :returns: dict -- Dictionary of keys that were sent and either `None`
+                or the server result string if the storage failed.
         '''
 
         output_buffers = {}
