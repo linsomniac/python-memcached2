@@ -405,7 +405,11 @@ class test_Memcache(unittest.TestCase):
         for i in range(10):
             data.append(('key{0}'.format(i), '!' * i))
 
-        results = memcache.set_multi(data)  # NOQA
+        results = memcache.set_multi(data)
+
+        self.assertEqual(len(results), 10)
+        self.assertFalse([x for x in results.values() if x is not None])
+
         for key, value in data:
             self.assertEqual(memcache.get(key), value)
 
