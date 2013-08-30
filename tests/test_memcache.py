@@ -413,6 +413,13 @@ class test_Memcache(unittest.TestCase):
         for key, value in data:
             self.assertEqual(memcache.get(key), value)
 
+        data.append(('badkey' * 512, 'value'))
+        results = memcache.set_multi(data)
+
+        self.assertEqual(len(results), 11)
+        self.assertEqual(
+                len([x for x in results.values() if x is not None]), 1)
+
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((
                 'memcached://localhost/', 'memcached://localhost/',))
