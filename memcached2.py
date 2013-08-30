@@ -86,7 +86,7 @@ def _to_bool(s):
 
 def _server_interaction(
         buffers_by_server, send_threshold, send_minimum,
-        expected_keys, results):
+        expected_keys, results, return_successful, return_failed):
     '''INTERNAL: Write and read to sockets that are ready.
 
     This is used by the :py:func:`~memcached2.Memcache.set_multi` code to
@@ -109,7 +109,12 @@ def _server_interaction(
         while server.line_available() and expected_keys[server]:
             line = server.read_until().rstrip()
             key = expected_keys[server].pop(0)
-            results[key] = (line if line != 'STORED' else None)
+
+            if line == 'STORED':
+                if return_successful:
+                    results[key] = None
+            elif return_failed:
+                results[key] = line
 
     #  send data to write-ready sockets
     for server in write_ready:
@@ -1039,7 +1044,9 @@ class Memcache:
                     key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
-    def set_multi(self, data, options={}):
+    def set_multi(
+            self, data, options={},
+            return_successful=True, return_failed=True):
         '''Set many key/value pairs at once.
         This produces pipelining of the multiple set operations, to get
         maximum performance.
@@ -1054,8 +1061,18 @@ class Memcache:
                 :py:func:`~memcached2.Memcache.set` for descriptions of these
                 items.
         :type options: dict
-        :returns: dict -- Dictionary of keys that were sent and either `None`
-                or the server result string if the storage failed.
+        :param return_successful: If True, the returned dictionary includes
+                keys that were successfully set (with the value `None`).
+                Default is True.
+        :type return_successful: boolean
+        :param return_failed: If True, the returned dictionary includes
+                keys that received a non-successful storage result.  The
+                value in the return data is the server response.
+                Default is True.
+        :type return_successful: boolean
+        :returns: dict -- Dictionary of keys that were stored and the
+                result code, depending on the values of `return_successful`
+                and `return_failed`.
         '''
 
         output_buffers = {}
@@ -1112,12 +1129,15 @@ class Memcache:
                     if len(x) >= send_threshold]:
                 _server_interaction(
                         output_buffers, send_threshold, send_minimum,
-                        expected_keys, results)
+                        expected_keys, results,
+                        return_successful, return_failed)
 
         #  complete interaction with servers
         while (_dictionary_values_empty(output_buffers)
                 or _dictionary_values_empty(expected_keys)):
-            _server_interaction(output_buffers, 0, 0, expected_keys, results)
+            _server_interaction(
+                    output_buffers, 0, 0, expected_keys, results,
+                    return_successful, return_failed)
 
         for server in nonblocking_servers:
             server.setblocking(True)

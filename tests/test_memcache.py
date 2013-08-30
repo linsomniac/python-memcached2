@@ -397,8 +397,8 @@ class test_Memcache(unittest.TestCase):
         self.assertEqual(len(data), 10)
 
     def test_SetMulti(self):
-        memcache = memcached2.Memcache((
-                'memcached://localhost/', 'memcached://localhost/'))
+        memcache = memcached2.Memcache(
+                ('memcached://localhost/', 'memcached://localhost/'))
         memcache.flush_all()
 
         data = []
@@ -407,18 +407,35 @@ class test_Memcache(unittest.TestCase):
 
         results = memcache.set_multi(data)
 
-        self.assertEqual(len(results), 10)
+        self.assertEqual(len(results), len(data))
         self.assertFalse([x for x in results.values() if x is not None])
 
         for key, value in data:
             self.assertEqual(memcache.get(key), value)
 
         data.append(('badkey' * 512, 'value'))
-        results = memcache.set_multi(data)
+        results = memcache.set_multi(data, return_successful=False)
 
-        self.assertEqual(len(results), 11)
+        self.assertEqual(len(results), 1)
         self.assertEqual(
                 len([x for x in results.values() if x is not None]), 1)
+
+        results = memcache.set_multi(
+                data, return_successful=False, return_failed=False)
+        self.assertEqual(len(results), 0)
+
+        #  try sending a lot of data
+        data = []
+        for i in range(10000):
+            data.append(
+                    ('longer_key_than_the_other_test{0}'.format(i),
+                        '!' * (i % 4000)))
+
+        results = memcache.set_multi(data, return_successful=False)
+
+        print('Results: {0}'.format(repr(results)))
+        self.assertEqual(len(results), 0)
+        self.assertFalse([x for x in results.values() if x is not None])
 
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((
