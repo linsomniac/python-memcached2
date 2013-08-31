@@ -414,7 +414,7 @@ class test_Memcache(unittest.TestCase):
             self.assertEqual(memcache.get(key), value)
 
         data.append(('badkey' * 512, 'value'))
-        with self.assertRaises(memcached2.ClientStorageError):
+        with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data, return_successful=False)
 
         #  try sending a lot of data

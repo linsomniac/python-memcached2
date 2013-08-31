@@ -93,6 +93,8 @@ def _server_interaction(
     interact with the server when buffers overflow or to finish sending and
     receiving data.
     '''
+    return_exception = None
+
     read_sockets = [x for x in buffers_by_server.keys() if x.backend]
 
     write_sockets = [
@@ -113,8 +115,9 @@ def _server_interaction(
             if line.startswith('CLIENT_ERROR'):
                 server.reset()
                 del buffers_by_server[server][:]
-                raise ClientStorageError(
-                        'CLIENT_ERROR received, possibly key is too long.')
+                return_exception = MultiStorageException(
+                        'CLIENT_ERROR received, possibly key is too long.',
+                        results)
 
             if line == 'STORED':
                 if return_successful:
@@ -129,6 +132,8 @@ def _server_interaction(
             continue
         bytes_sent = server.backend.send(data)
         del data[:bytes_sent]
+
+    return return_exception
 
 
 def _dictionary_values_empty(d):
@@ -181,10 +186,13 @@ class CASFailure(StoreException):
     :class:`StoreException`.'''
 
 
-class ClientStorageError(StoreException):
+class MultiStorageException(StoreException):
     '''During a SET operation the server returned CLIENT_ERROR.  This is
     probably due to too long of a key being used.  Subclass of
     :class:`StoreException`.'''
+    def __init__(self, message=None, results={}):
+        self.message = message
+        self.results = results
 
 
 class CASRefreshFailure(CASFailure):
@@ -1092,7 +1100,7 @@ class Memcache:
                 result code, depending on the values of `return_successful`
                 and `return_failed`.
 
-        :raises: :py:exc:`ClientStorageError`
+        :raises: :py:exc:`MultiStorageException`
         '''
 
         output_buffers = {}
@@ -1101,6 +1109,7 @@ class Memcache:
         nonblocking_servers = set()
         send_threshold = 180224
         send_minimum = send_threshold
+        deferred_exception = None
 
         base_options = {
                 'flags': 0,
@@ -1147,20 +1156,27 @@ class Memcache:
             if [
                     x for x in output_buffers.values()
                     if len(x) >= send_threshold]:
-                _server_interaction(
+                had_exception = _server_interaction(
                         output_buffers, send_threshold, send_minimum,
                         expected_keys, results,
                         return_successful, return_failed)
+                if had_exception:
+                    deferred_exception = had_exception
 
         #  complete interaction with servers
         while (_dictionary_values_empty(output_buffers)
                 or _dictionary_values_empty(expected_keys)):
-            _server_interaction(
+            had_exception = _server_interaction(
                     output_buffers, 0, 0, expected_keys, results,
                     return_successful, return_failed)
+            if had_exception:
+                deferred_exception = had_exception
 
         for server in nonblocking_servers:
             server.setblocking(True)
+
+        if deferred_exception:
+            raise deferred_exception
 
         return results
 
@@ -1791,6 +1807,26 @@ class ExceptionsAreMissesMemcache(Memcache):
 
     def set(self, *args, **kwargs):
         '''Update the value in the server.
+        See :py:func:`~memcached2.Memcache.set` for details on this
+        method.  Changes from the base function are:
+
+        Exceptions are swallowed and treated as memcached misses.
+        See :py:func:`~memcached2.Memcache.set` for details on this
+        method.  Changes from the base function are:
+
+        :raises: Exceptions are swallowed and treated a misses.
+        '''
+        try:
+            return Memcache.set(self, *args, **kwargs)
+        except (ServerDisconnect, NotStored, NotFound, CASFailure):
+            return None
+
+    def set_multi(
+            self, data, options={},
+            return_successful=True, return_failed=True):
+        '''Update multiple values in the server.
+        See :py:func:`~memcached2.Memcache.set_multi` for details on this
+        method.  Changes from the base function are:
 
         Exceptions are swallowed and treated as memcached misses.
         See :py:func:`~memcached2.Memcache.set` for details on this
