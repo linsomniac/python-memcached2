@@ -1,6 +1,12 @@
 What's New in python-memcached2
 *******************************
 
+Sat Aug 31, 2013
+
+  * I have finished the implementation of set_multi(), but it could use
+    some more tests, particularly those verifying what happens on bad
+    server responses.
+
 Mon Aug 26, 2013
 
   * I have completed the implementation of send_multi() and it passes a

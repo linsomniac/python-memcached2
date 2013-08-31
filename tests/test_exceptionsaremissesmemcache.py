@@ -45,6 +45,20 @@ class test_ExceptionsAreMissesMemcache(unittest.TestCase):
         mc.delete('bar')
         self.assertEqual(mc.get('foo'), None)
 
+    def test_SetMulti(self):
+        memcache = memcached2.ExceptionsAreMissesMemcache(
+                ('memcached://localhost/', 'memcached://localhost/'))
+
+        data = []
+        for i in range(10):
+            data.append(('key{0}'.format(i), '!' * i))
+        data.append(('badkey' * 512, 'value'))
+
+        results = memcache.set_multi(data, return_successful=False)
+
+        self.assertEqual(len(results), 1)
+        self.assertTrue(list(results.keys())[0].startswith('badkey'))
+
     def test_SetServerDisconnect(self):
         server = CommandServer([])
         mc = memcached2.ExceptionsAreMissesMemcache(

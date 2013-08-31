@@ -1848,8 +1848,9 @@ class ExceptionsAreMissesMemcache(Memcache):
         '''
         try:
             return Memcache.set_multi(self, *args, **kwargs)
-        except (ServerDisconnect, NotStored, NotFound, CASFailure):
-            return None
+        #  ServerDisconnect here too?  Maybe should happen in set_multi.
+        except (MultiStorageException) as e:
+            return e.results
 
     def delete(self, *args, **kwargs):
         '''Remove this key from the server.
