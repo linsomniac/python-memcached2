@@ -414,15 +414,8 @@ class test_Memcache(unittest.TestCase):
             self.assertEqual(memcache.get(key), value)
 
         data.append(('badkey' * 512, 'value'))
-        results = memcache.set_multi(data, return_successful=False)
-
-        self.assertEqual(len(results), 1)
-        self.assertEqual(
-                len([x for x in results.values() if x is not None]), 1)
-
-        results = memcache.set_multi(
-                data, return_successful=False, return_failed=False)
-        self.assertEqual(len(results), 0)
+        with self.assertRaises(memcached2.ClientStorageError):
+            results = memcache.set_multi(data, return_successful=False)
 
         #  try sending a lot of data
         data = []
@@ -433,7 +426,6 @@ class test_Memcache(unittest.TestCase):
 
         results = memcache.set_multi(data, return_successful=False)
 
-        print('Results: {0}'.format(repr(results)))
         self.assertEqual(len(results), 0)
         self.assertFalse([x for x in results.values() if x is not None])
 

@@ -110,6 +110,12 @@ def _server_interaction(
             line = server.read_until().rstrip()
             key = expected_keys[server].pop(0)
 
+            if line.startswith('CLIENT_ERROR'):
+                server.reset()
+                del buffers_by_server[server][:]
+                raise ClientStorageError(
+                        'CLIENT_ERROR received, possibly key is too long.')
+
             if line == 'STORED':
                 if return_successful:
                     results[key] = None
@@ -119,6 +125,8 @@ def _server_interaction(
     #  send data to write-ready sockets
     for server in write_ready:
         data = buffers_by_server[server]
+        if not data:
+            continue
         bytes_sent = server.backend.send(data)
         del data[:bytes_sent]
 
@@ -157,7 +165,7 @@ class NoAvailableServers(MemcachedException):
 
 
 class StoreException(MemcachedException):
-    '''Base class for storage related exceptions.  Never raised directly..
+    '''Base class for storage related exceptions.  Never raised directly.
     Subclass of :class:`MemcachedException`.'''
 
 
@@ -170,6 +178,12 @@ class NotStored(StoreException):
 class CASFailure(StoreException):
     '''Item you are trying to store with a "cas" command has been modified
     since you last fetched it (result=EXISTS).  Subclass of
+    :class:`StoreException`.'''
+
+
+class ClientStorageError(StoreException):
+    '''During a SET operation the server returned CLIENT_ERROR.  This is
+    probably due to too long of a key being used.  Subclass of
     :class:`StoreException`.'''
 
 
