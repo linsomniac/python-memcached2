@@ -114,6 +114,7 @@ def _server_interaction(
 
             if line.startswith('CLIENT_ERROR'):
                 server.reset()
+                server.connect()
                 del buffers_by_server[server][:]
                 return_exception = MultiStorageException(
                         'CLIENT_ERROR received, possibly key is too long.',
