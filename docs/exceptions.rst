@@ -32,6 +32,7 @@ Exceptions
 .. autoclass:: ServerDisconnect
 .. autoclass:: NoAvailableServers
 .. autoclass:: StoreException
+.. autoclass:: ClientStoreError
 .. autoclass:: NotStored
 .. autoclass:: CASFailure
 .. autoclass:: CASRefreshFailure

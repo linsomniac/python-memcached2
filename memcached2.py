@@ -1065,6 +1065,10 @@ class Memcache:
         This produces pipelining of the multiple set operations, to get
         maximum performance.
 
+        *Note*: If a client error occurs, such as too long a key being sent,
+        the remainder of that data block will be discarded and the connection
+        to the server reset.
+
         :param data: A list of (key,value) pairs, for example as produced
                 by dict.items().  Optionally, a third element may be a
                 dictionary containing the options for this key, as in the
@@ -1087,6 +1091,8 @@ class Memcache:
         :returns: dict -- Dictionary of keys that were stored and the
                 result code, depending on the values of `return_successful`
                 and `return_failed`.
+
+        :raises: :py:exc:`ClientStorageError`
         '''
 
         output_buffers = {}
