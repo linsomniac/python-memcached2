@@ -1067,6 +1067,49 @@ class Memcache:
                     key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
+    def _buffer_data(
+            self, output_buffers, to_send, base_options,
+            nonblocking_servers, expected_keys):
+        '''INTERNAL: Add data to the output buffer.
+
+        This is used by the :py:func:`~memcached2.Memcache.set_multi` code to
+        buffer multi data for the servers.
+        '''
+
+        #  set up
+        key = to_send[0]
+        value = to_send[1]
+        if len(to_send) == 2:
+            key_options = base_options
+        else:
+            key_options = base_options.copy()
+            base_options.update(to_send[2])
+
+        #  find server for command
+        server = self.selector.select(self.servers, self.hasher.hash, key)
+        if not server in nonblocking_servers:
+            nonblocking_servers.add(server)
+            server.setblocking(False)
+            output_buffers[server] = bytearray()
+            expected_keys[server] = []
+
+        #  add command to output buffer
+        output_buffer = output_buffers[server]
+        expected_keys[server].append(key)
+        if key_options['cas_unique'] is not None:
+            output_buffer.extend(_to_bytes(
+                    'cas {0} {1} {2} {3} {4}\r\n'.format(
+                    key, key_options['flags'], key_options['exptime'],
+                    len(value),
+                    key_options['cas_unique'])))
+        else:
+            output_buffer.extend(_to_bytes(
+                    'set {0} {1} {2} {3}\r\n'.format(
+                    key, key_options['flags'], key_options['exptime'],
+                    len(value))))
+        output_buffer.extend(_to_bytes(value))
+        output_buffer.extend(_to_bytes('\r\n'))
+
     def set_multi(
             self, data, options={},
             return_successful=True, return_failed=True):
@@ -1119,39 +1162,9 @@ class Memcache:
         base_options.update(options)
 
         for to_send in data:
-            #  set up
-            key = to_send[0]
-            value = to_send[1]
-            if len(to_send) == 2:
-                key_options = base_options
-            else:
-                key_options = base_options.copy()
-                base_options.update(to_send[2])
-
-            #  find server for command
-            server = self.selector.select(self.servers, self.hasher.hash, key)
-            if not server in nonblocking_servers:
-                nonblocking_servers.add(server)
-                server.setblocking(False)
-                output_buffers[server] = bytearray()
-                expected_keys[server] = []
-
-            #  add command to output buffer
-            output_buffer = output_buffers[server]
-            expected_keys[server].append(key)
-            if key_options['cas_unique'] is not None:
-                output_buffer.extend(_to_bytes(
-                        'cas {0} {1} {2} {3} {4}\r\n'.format(
-                        key, key_options['flags'], key_options['exptime'],
-                        len(value),
-                        key_options['cas_unique'])))
-            else:
-                output_buffer.extend(_to_bytes(
-                        'set {0} {1} {2} {3}\r\n'.format(
-                        key, key_options['flags'], key_options['exptime'],
-                        len(value))))
-            output_buffer.extend(_to_bytes(value))
-            output_buffer.extend(_to_bytes('\r\n'))
+            self._buffer_data(
+                    output_buffers, to_send, base_options,
+                    nonblocking_servers, expected_keys)
 
             #  send data and read any ready data
             if [
@@ -1822,9 +1835,7 @@ class ExceptionsAreMissesMemcache(Memcache):
         except (ServerDisconnect, NotStored, NotFound, CASFailure):
             return None
 
-    def set_multi(
-            self, data, options={},
-            return_successful=True, return_failed=True):
+    def set_multi(self, *args, **kwargs):
         '''Update multiple values in the server.
         See :py:func:`~memcached2.Memcache.set_multi` for details on this
         method.  Changes from the base function are:
@@ -1836,7 +1847,7 @@ class ExceptionsAreMissesMemcache(Memcache):
         :raises: Exceptions are swallowed and treated a misses.
         '''
         try:
-            return Memcache.set(self, *args, **kwargs)
+            return Memcache.set_multi(self, *args, **kwargs)
         except (ServerDisconnect, NotStored, NotFound, CASFailure):
             return None
 
