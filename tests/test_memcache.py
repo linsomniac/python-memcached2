@@ -29,6 +29,7 @@ import mctestsupp
 from faketcpserver import RECEIVE, CommandServer
 import memcached2
 import time
+import os
 
 
 class test_Memcache(unittest.TestCase):
@@ -86,15 +87,16 @@ class test_Memcache(unittest.TestCase):
         result.decr(3)
         self.assertEqual(memcache.get('foo'), '3')
 
-        memcache.set('foo', '1', exptime=1)
-        result = memcache.get('foo')
-        result.touch(10)
-        time.sleep(2)
-        self.assertEqual(memcache.get('foo'), '1')
-        result.touch(1)
-        time.sleep(2)
-        with self.assertRaises(memcached2.NoValue):
-            memcache.get('foo')
+        if 'SKIP_SLOW_TESTS' not in os.environ:
+            memcache.set('foo', '1', exptime=1)
+            result = memcache.get('foo')
+            result.touch(10)
+            time.sleep(2)
+            self.assertEqual(memcache.get('foo'), '1')
+            result.touch(1)
+            time.sleep(2)
+            with self.assertRaises(memcached2.NoValue):
+                memcache.get('foo')
 
         memcache.close()
 
@@ -201,6 +203,7 @@ class test_Memcache(unittest.TestCase):
         memcache.set('foo', 'bar')
         memcache.get('foo')
 
+    @unittest.skipIf('SKIP_SLOW_TESTS' in os.environ, 'Requested fast tests')
     def test_TestFlagsAndExptime(self):
         memcache = memcached2.Memcache(
                 ('memcached://localhost/',),
@@ -211,7 +214,6 @@ class test_Memcache(unittest.TestCase):
         self.assertEqual(result, 'xXx')
         self.assertEqual(result.flags, 12)
 
-        import time
         time.sleep(2)
 
         with self.assertRaises(memcached2.NoValue):
@@ -281,9 +283,8 @@ class test_Memcache(unittest.TestCase):
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.flush_all()
 
+    @unittest.skipIf('SKIP_SLOW_TESTS' in os.environ, 'Requested fast tests')
     def test_Touch(self):
-        import time
-
         memcache = memcached2.Memcache(('memcached://localhost/',))
         memcache.set('foo', 'bar', exptime=1)
         self.assertEqual(memcache.get('foo'), 'bar')
@@ -428,6 +429,56 @@ class test_Memcache(unittest.TestCase):
 
         self.assertEqual(len(results), 0)
         self.assertFalse([x for x in results.values() if x is not None])
+
+    def test_SetMultiErrors(self):
+        data = []
+        for i in range(10):
+            data.append(('key{0}'.format(i), '!' * i))
+
+        server = CommandServer([])
+        memcache = memcached2.Memcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        with self.assertRaises(memcached2.MultiStorageException):
+            results = memcache.set_multi(data)
+
+        server = CommandServer([RECEIVE,])
+        memcache = memcached2.Memcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        with self.assertRaises(memcached2.MultiStorageException):
+            results = memcache.set_multi(data)
+
+        server = CommandServer([RECEIVE, 'STORED\r\n'*9,])
+        memcache = memcached2.Memcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        with self.assertRaises(memcached2.MultiStorageException):
+            results = memcache.set_multi(data)
+
+        server = CommandServer([RECEIVE, 'STORED\r\n'*10,])
+        memcache = memcached2.Memcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        results = memcache.set_multi(data)
+
+        server = CommandServer(
+                [RECEIVE, ('STORED\r\n'*5) + 'CLIENT_ERROR Failed\r\n',])
+        memcache = memcached2.Memcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        try:
+            memcache.set_multi(data)
+            self.fail('Did not raise MultiStorageException')
+        except (memcached2.MultiStorageException) as e:
+            self.assertTrue(e.results['key5'].startswith('CLIENT_ERROR'))
+            self.assertEqual(e.results['key4'], None)
+            self.assertNotIn('key6', e.results)
 
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((

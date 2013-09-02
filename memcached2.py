@@ -104,21 +104,31 @@ def _server_interaction(
     read_ready, write_ready = select.select(
             read_sockets, write_sockets, [])[:2]
 
+    def deferred_exception(
+            server, results, buffers_by_server, expected_keys, message):
+        server.reset()
+        server.connect()
+        del buffers_by_server[server][:]
+        del expected_keys[server][:]
+        return MultiStorageException(message, results)
+
     #  receive data from read-ready sockets
     for server in read_ready:
-        server.read_from_socket()
+        try:
+            server.read_from_socket()
+        except ServerDisconnect:
+            return_exception = deferred_exception(
+                    server, results, buffers_by_server, expected_keys,
+                    'ServerDisconnect received, probably server died')
 
         while server.line_available() and expected_keys[server]:
             line = server.read_until().rstrip()
             key = expected_keys[server].pop(0)
 
             if line.startswith('CLIENT_ERROR'):
-                server.reset()
-                server.connect()
-                del buffers_by_server[server][:]
-                return_exception = MultiStorageException(
-                        'CLIENT_ERROR received, possibly key is too long.',
-                        results)
+                return_exception = deferred_exception(
+                        server, results, buffers_by_server, expected_keys,
+                        'CLIENT_ERROR received, possibly key is too long.')
 
             if line == 'STORED':
                 if return_successful:
@@ -1849,7 +1859,7 @@ class ExceptionsAreMissesMemcache(Memcache):
         try:
             return Memcache.set_multi(self, *args, **kwargs)
         #  ServerDisconnect here too?  Maybe should happen in set_multi.
-        except (MultiStorageException) as e:
+        except MultiStorageException as e:
             return e.results
 
     def delete(self, *args, **kwargs):

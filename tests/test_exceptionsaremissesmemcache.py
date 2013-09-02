@@ -59,6 +59,58 @@ class test_ExceptionsAreMissesMemcache(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertTrue(list(results.keys())[0].startswith('badkey'))
 
+    def test_SetMultiErrors(self):
+        data = []
+        for i in range(10):
+            data.append(('key{0}'.format(i), '!' * i))
+
+        server = CommandServer([])
+        memcache = memcached2.ExceptionsAreMissesMemcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        results = memcache.set_multi(data)
+        self.assertEqual(len(results), 0)
+
+        server = CommandServer([RECEIVE,])
+        memcache = memcached2.ExceptionsAreMissesMemcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        results = memcache.set_multi(data)
+        self.assertEqual(len(results), 0)
+
+        server = CommandServer([RECEIVE, 'STORED\r\n'*9,])
+        memcache = memcached2.ExceptionsAreMissesMemcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        results = memcache.set_multi(data)
+        self.assertIn('key0', results)
+        self.assertIn('key8', results)
+        self.assertNotIn('key9', results)
+
+        server = CommandServer([RECEIVE, 'STORED\r\n'*10,])
+        memcache = memcached2.ExceptionsAreMissesMemcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        results = memcache.set_multi(data)
+        self.assertIn('key0', results)
+        self.assertIn('key9', results)
+
+        server = CommandServer(
+                [RECEIVE, ('STORED\r\n'*5) + 'CLIENT_ERROR Failed\r\n',])
+        memcache = memcached2.ExceptionsAreMissesMemcache(
+                ('memcached://localhost:{0}/'.format(server.port),),
+                value_wrapper=memcached2.ValueSuperStr)
+
+        results = memcache.set_multi(data)
+        self.assertTrue(results['key5'].startswith('CLIENT_ERROR'))
+        self.assertEqual(results['key4'], None)
+        self.assertNotIn('key6', results)
+
+
     def test_SetServerDisconnect(self):
         server = CommandServer([])
         mc = memcached2.ExceptionsAreMissesMemcache(
