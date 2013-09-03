@@ -104,20 +104,12 @@ def _server_interaction(
     read_ready, write_ready = select.select(
             read_sockets, write_sockets, [])[:2]
 
-    def deferred_exception(
-            server, results, buffers_by_server, expected_keys, message):
-        server.reset()
-        server.connect()
-        del buffers_by_server[server][:]
-        del expected_keys[server][:]
-        return MultiStorageException(message, results)
-
     #  receive data from read-ready sockets
     for server in read_ready:
         try:
             server.read_from_socket()
         except ServerDisconnect:
-            return_exception = deferred_exception(
+            return_exception = _deferred_exception(
                     server, results, buffers_by_server, expected_keys,
                     'ServerDisconnect received, probably server died')
 
@@ -126,7 +118,7 @@ def _server_interaction(
             key = expected_keys[server].pop(0)
 
             if line.startswith('CLIENT_ERROR'):
-                return_exception = deferred_exception(
+                return_exception = _deferred_exception(
                         server, results, buffers_by_server, expected_keys,
                         'CLIENT_ERROR received, possibly key is too long.')
 
@@ -145,6 +137,20 @@ def _server_interaction(
         del data[:bytes_sent]
 
     return return_exception
+
+
+def _deferred_exception(
+        server, results, buffers_by_server, expected_keys, message):
+    '''INTERNAL: Handle an exception on a socket during set_multi.
+
+    This is used by the :py:func:`~memcached2.Memcache.set_multi` code to
+    reset socket connections and reconnect, flushing data to re-gain sync.
+    '''
+    server.reset()
+    server.connect()
+    del buffers_by_server[server][:]
+    del expected_keys[server][:]
+    return MultiStorageException(message, results)
 
 
 def _dictionary_values_empty(d):

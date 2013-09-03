@@ -443,7 +443,7 @@ class test_Memcache(unittest.TestCase):
         with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data)
 
-        server = CommandServer([RECEIVE,])
+        server = CommandServer([RECEIVE])
         memcache = memcached2.Memcache(
                 ('memcached://localhost:{0}/'.format(server.port),),
                 value_wrapper=memcached2.ValueSuperStr)
@@ -451,7 +451,7 @@ class test_Memcache(unittest.TestCase):
         with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data)
 
-        server = CommandServer([RECEIVE, 'STORED\r\n'*9,])
+        server = CommandServer([RECEIVE, 'STORED\r\n' * 9])
         memcache = memcached2.Memcache(
                 ('memcached://localhost:{0}/'.format(server.port),),
                 value_wrapper=memcached2.ValueSuperStr)
@@ -459,15 +459,18 @@ class test_Memcache(unittest.TestCase):
         with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data)
 
-        server = CommandServer([RECEIVE, 'STORED\r\n'*10,])
+        server = CommandServer([RECEIVE, 'STORED\r\n' * 10])
         memcache = memcached2.Memcache(
                 ('memcached://localhost:{0}/'.format(server.port),),
                 value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
+        self.assertEqual(len(results), 10)
+        self.assertIn('key0', results)
+        self.assertIn('key9', results)
 
         server = CommandServer(
-                [RECEIVE, ('STORED\r\n'*5) + 'CLIENT_ERROR Failed\r\n',])
+                [RECEIVE, ('STORED\r\n' * 5) + 'CLIENT_ERROR Failed\r\n'])
         memcache = memcached2.Memcache(
                 ('memcached://localhost:{0}/'.format(server.port),),
                 value_wrapper=memcached2.ValueSuperStr)
