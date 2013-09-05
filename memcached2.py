@@ -44,6 +44,7 @@ import sys
 from binascii import crc32
 import collections
 from bisect import bisect
+import Queue
 
 PY3 = sys.version > '3'
 PY33 = sys.version > '3.3'
@@ -557,6 +558,35 @@ class HasherCMemcache(HasherBase):
         key = _to_bytes(key)
         return ((((crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
 
+
+class ServerPool:
+    '''A pool of servers that connections can be checked in/out from.
+
+    Implements a thread-safe pool for storing server connections.  This
+    allows only the active users of sockets to be holding connections.
+    Fewer connections may be needed because of this.
+    '''
+
+    def __init__(self, server_url_list = []):
+        self.server_pools = {}
+        for server_url in server_url_list:
+            self._add(server_url)
+
+    def _add(self, server_url):
+        if server_url in self.server_pools:
+            return
+        self.server_pools[server_url] = Queue.Queue()
+
+    def get(self, server_url):
+        self._add(server_url)
+        pool = self.server_pools[server_url]
+        try:
+            return pool.get_nowait()
+        except Queue.Empty:
+            return ServerConnection(server_url)
+
+    def put(self, server_url, connection):
+        self.server_pools[server_url].put(connection)
 
 class SelectorBase:
     '''Select which server to use.
