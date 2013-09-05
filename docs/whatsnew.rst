@@ -1,6 +1,8 @@
 What's New in python-memcached2
 *******************************
 
+  * Renamed SelectorAvailableServers to SelectorRehashDownServers.
+
 Wed Sep 04, 2013
 
   * I'm going to tag this as 0.3, because it's at a pretty functional state,

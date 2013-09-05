@@ -603,7 +603,7 @@ class SelectorBase:
 
     This is an abstract base class, here largely for documentation purposes.
     Selector sub-classes such as :py:class:`~memcached2.SelectorFirst` and
-    :py:class:`~memcached2.SelectorAvailableServers`, implement a `select`
+    :py:class:`~memcached2.SelectorRehashDownServers`, implement a `select`
     method which does all the work.
 
     See :py:func:`~memcached2.SelectorBase.select` for details of implementing
@@ -842,7 +842,7 @@ class Memcache:
             implements the server selector logic.  If not specified, the
             default is used.  The default is to use
             :py:class:`~memcached2.SelectorFirst` if only one server is
-            specified, and :py:class:`~memcached2.SelectorAvailableServers`
+            specified, and :py:class:`~memcached2.SelectorRehashDownServers`
             if multiple servers are given.
         :type selector: "Selector" class object.
         :param hasher: (None) A "Hash" object which takes a key and returns
@@ -876,7 +876,7 @@ class Memcache:
             if len(self.servers) < 2:
                 self.selector = SelectorFirst()
             elif len(self.servers) == 2:
-                self.selector = SelectorAvailableServers()
+                self.selector = SelectorRehashDownServers()
             else:
                 self.selector = SelectorFractalSharding()
 
