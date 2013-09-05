@@ -559,19 +559,17 @@ class HasherCMemcache(HasherBase):
 
 
 class SelectorBase:
-    '''Select which server to use and reconnect to down servers.
+    '''Select which server to use.
 
-    These classes implement both the algorithm for selecting the server and
-    for reconnecting to servers that are down.
+    These classes implement a variety of algorithms for determining which
+    server to use, based on the key being stored.
 
     The selection is done based on a `key_hash`, as returned by the
-    :py:func:`memcached2.HasherBase.hash` function.  Servers that are
-    down must be reconnected to, as all servers initially start off
-    disconnected.
+    :py:func:`memcached2.HasherBase.hash` function.
 
     Normally, the python-memcached2 classes will automatically pick a
     selector to use.  However, for special circumstances you may wish to
-    use a different selector or develop your own.
+    use a specific Selector or develop your own.
 
     This is an abstract base class, here largely for documentation purposes.
     Selector sub-classes such as :py:class:`~memcached2.SelectorFirst` and
@@ -585,11 +583,7 @@ class SelectorBase:
         '''Select a server bashed on the `key_hash`.
 
         Given the list of servers and a hash of of key, determine which
-        of the servers this key is stored on.
-
-        This often makes use of the `backend` attribute of the `server_list`
-        elements, if it is None, the server is not currently connected
-        to.
+        of the servers this key is associated with on.
 
         :param server_list: A list of the servers to select among.
         :type server_list: list of :py:class:`~memcache2.ServerConnection`.
@@ -607,69 +601,53 @@ class SelectorBase:
 class SelectorFirst(SelectorBase):
     '''Server selector that only returns the first server.  Useful when there
     is only one server to select amongst.
-
-    If the server is down, an attempt to reconnect will be made.
     '''
     def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
         server = server_list[0]
-        if not server.backend:
-            server.connect()
+        raise NotImplementedError('Check server up and reconnection')
         return server
 
 
-class SelectorAvailableServers(SelectorBase):
-    '''Select among all "up" server connections.
+class SelectorRehashDownServers(SelectorBase):
+    '''Select a server, if it is down re-hash up to `hashing_retries` times.
 
-    This was the default in the original python-memcached module.
+    This was the default in the original python-memcached module.  If the
+    server that a key is housed on is down, it will re-hash the key after
+    adding an (ASCII) number of tries to the key and try that server.
 
-    In the event that a server goes down or comes back up, the keyspace
-    is remapped across all servers.  This requires that much of the keyspace
-    be rebuilt.
+    This is most suitable if you want to inter-operate with the old
+    python-memcache client.
 
-    This is most suitable for either 2 servers or when you want to ensure
-    no stale data in the cache if a server flaps, via flushing of the
-    caches on a topology change.
-
-    After a specified number of operations, and at the first operation, an
-    attempt will be made to connect to any servers that are not currently
-    up.
+    If no up server is found after `hashing_retries` attempts,
+    :py:exc:`memcached2.NoAvailableServers` is raised.
     '''
-    def __init__(self, reconnect_frequency=100, topological_flush=False):
+    def __init__(self, hashing_retries=10):
         '''
-        :param reconnect_frequency: Every this many operations, attempt
-            reconecting to all down servers.
-        :type reconnect_frequency: int
-        :param topological_flush: Flush all servers when the topology changes.
-        :type topological_flush: boolean
+        :param hashing_retries: Retry hashing the key looking for another
+            server this many times.
+        :type hashing_retries: int
         '''
-        self.reconnect_frequency = reconnect_frequency
-        self.operations_to_next_reconnect = 0
-        self.topological_flush = topological_flush
-        self.old_topology = None
+        self.hashing_retries = hashing_retries
 
     def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
-        if self.operations_to_next_reconnect < 1:
-            self.operations_to_next_reconnect = self.reconnect_frequency
-            for server in [x for x in server_list if not x.backend]:
-                server.connect()
-        else:
-            self.operations_to_next_reconnect -= 1
+        server = server_list[hasher(key) % len(server_list)]
+        raise NotImplementedError('Is server up?')
+        if is_server_up(server):
+            return server
 
-        up_server_list = [x for x in server_list if x.backend]
-        if not up_server_list:
-            raise NoAvailableServers()
+        for i in range(self.hashing_retries):
+            server = server_list[hasher(key + str(i)) % len(server_list)]
+            raise NotImplementedError('Is server up?')
+            if is_server_up(server):
+                return server
 
-        if self.topological_flush:
-            if self.old_topology == up_server_list:
-                self.flush_all()
-                self.old_topology = up_server_list
-        return up_server_list[hasher(key) % len(up_server_list)]
+        raise NoAvailableServers()
 
 
 class SelectorFractalSharding(SelectorBase):
@@ -688,12 +666,10 @@ class SelectorFractalSharding(SelectorBase):
     attempt will be made to connect to any servers that are not currently
     up.
     '''
-    def __init__(self, topological_flush=False):
+    def __init__(self):
         '''
-        :param topological_flush: Flush all servers when the topology changes.
-        :type topological_flush: boolean
         '''
-        self.topological_flush = topological_flush
+        pass
 
     def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
@@ -705,11 +681,9 @@ class SelectorFractalSharding(SelectorBase):
         for i in range(len(orig_server_list)):
             position = current_hash % len(server_list)
             server = server_list[position]
-            if not server.backend:
-                server.connect()
-                if self.topological_flush and server.backend:
-                    self.flush_all()
-            if server.backend:
+
+            raise NotImplementedError('Server up/connecting logic here')
+            if is_server_up(server):
                 return server
 
             #  restir hash and look among remiaining servers
@@ -717,6 +691,8 @@ class SelectorFractalSharding(SelectorBase):
                 server_list = server_list[:]
             del(server_list[position])
             current_hash = hasher(key + str(i))
+
+        raise NoAvailableServers()
 
 
 class SelectorConsistentHashing(SelectorBase):
@@ -735,15 +711,9 @@ class SelectorConsistentHashing(SelectorBase):
     It also is fairly expensive to add and remove servers from the pool
     (not implemented in this code).  Note that it is NOT expensive to
     fail a server, only to completely remove it.
-
-    After a specified number of operations, and at the first operation, an
-    attempt will be made to connect to any servers that are not currently
-    up.
     '''
-    def __init__(self, topological_flush=False, total_buckets=None):
+    def __init__(self, total_buckets=None):
         '''
-        :param topological_flush: Flush all servers when the topology changes.
-        :type topological_flush: boolean
         :param total_buckets: How many buckets to create.  Smaller values
                 decrease the startup overhead, but also mean that a down
                 server will tend to not evenly redistribute it's load across
@@ -751,11 +721,13 @@ class SelectorConsistentHashing(SelectorBase):
                 value of the number of servers squared.
         :type total_buckets: int
         '''
-        self.topological_flush = topological_flush
         self.total_buckets = None
         self.buckets = None
 
     def _initialize_buckets(self, server_list, hasher):
+        '''Create the consistent-hashing set of buckets, used for determining
+        what server to use.'''
+
         if self.buckets is not None:
             return
         len_server_list = len(server_list)
@@ -798,11 +770,8 @@ class SelectorConsistentHashing(SelectorBase):
                 continue
             already_tried_servers.update([server_offset])
 
-            if not server.backend:
-                server.connect()
-                if self.topological_flush and server.backend:
-                    self.flush_all()
-            if server.backend:
+            raise NotImplementedError('Server up/connecting logic here')
+            if is_server_up(server):
                 return server
 
         raise NoAvailableServers()
