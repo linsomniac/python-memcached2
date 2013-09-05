@@ -1,6 +1,12 @@
 What's New in python-memcached2
 *******************************
 
+Wed Sep 04, 2013
+
+  * I'm going to tag this as 0.3, because it's at a pretty functional state,
+    and I'm going to stat breaking things to work on separating the server
+    connecting and re-connecting from the server selection.
+
 Sat Aug 31, 2013
 
   * I have finished the implementation of set_multi(), but it could use

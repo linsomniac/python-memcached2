@@ -7,13 +7,9 @@ well.
 
 **I am looking for feedback on this module, its design and architecture.**
 
-**2013-08-26**: I've been distracted with a new job, but have gotten
-`set_multi()` working, which was one of the few big things left.
-
-**2013-06-10**: I continue to plug along a bit at a time.  I've tagged
-release-0.2, because I want to start making some changes to the server
-connection code as part of the connection pooling work.  So things may be
-unstable over the next couple of weeks.
+**2013-09-04**: I'm tagging release-0.3, so that I can make some dramatic
+changes to the server selection code.  Until further notice, you probably
+want to use the 0.3 tag rather than HEAD.
 
 These "What's new" dated entries are now recorded in the
 "[docs/whatsnew.rst](https://python-memcached2.readthedocs.org/en/latest/whatsnew.html)" file.
