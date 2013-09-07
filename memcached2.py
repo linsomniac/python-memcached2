@@ -44,10 +44,13 @@ import sys
 from binascii import crc32
 import collections
 from bisect import bisect
-import Queue
 
 PY3 = sys.version > '3'
 PY33 = sys.version > '3.3'
+if PY3:
+    import queue
+else:
+    import Queue as queue
 if not PY33:
     ConnectionResetError = socket.error
 
@@ -577,7 +580,7 @@ class ServerPool:
         '''
         if server_url in self.server_pools:
             return
-        self.server_pools[server_url] = Queue.Queue()
+        self.server_pools[server_url] = queue.Queue()
 
     def get(self, server_url):
         '''Retrieve a server for use.  Either pulling it from the queue or
@@ -591,7 +594,7 @@ class ServerPool:
         pool = self.server_pools[server_url]
         try:
             return pool.get_nowait()
-        except Queue.Empty:
+        except queue.Empty:
             return ServerConnection(server_url)
 
     def put(self, connection):
