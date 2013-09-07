@@ -568,16 +568,25 @@ class ServerPool:
     '''
 
     def __init__(self, server_url_list = []):
+        '''Initialize ServerPool.
+        '''
         self.server_pools = {}
-        for server_url in server_url_list:
-            self._add(server_url)
 
     def _add(self, server_url):
+        '''INTERNAL: Add the specified server to the list.
+        '''
         if server_url in self.server_pools:
             return
         self.server_pools[server_url] = Queue.Queue()
 
     def get(self, server_url):
+        '''Retrieve a server for use.  Either pulling it from the queue or
+        making a new connection object.
+
+        :param server_url: The URL for the server we need a connection to.
+        :type server_url: str
+        :returns: ServerConnection -- Server connection to use.
+        '''
         self._add(server_url)
         pool = self.server_pools[server_url]
         try:
@@ -585,8 +594,13 @@ class ServerPool:
         except Queue.Empty:
             return ServerConnection(server_url)
 
-    def put(self, server_url, connection):
-        self.server_pools[server_url].put(connection)
+    def put(self, connection):
+        '''Return a connection to the pool.
+
+        :param connection: Connection to return to the queue.
+        :type connection: :py:class:`~memcache2.ServerConnection`
+        '''
+        self.server_pools[connection.uri].put(connection)
 
 class SelectorBase:
     '''Select which server to use.
