@@ -654,7 +654,8 @@ class SelectorFirst(SelectorBase):
         this function.
         '''
         server = server_list[0]
-        raise NotImplementedError('Check server up and reconnection')
+        if not server.is_up():
+            server.connect()
         return server
 
 
@@ -1929,6 +1930,13 @@ class ServerConnection:
         self.buffer_readsize = 10000
         self.is_blocking = True
         self.reset()
+
+    def is_up(self):
+        '''Is the connection to the backend up?
+
+        :returns: boolean -- If the connection to the server is ok.
+        '''
+        return self.backend is not None
 
     def reset(self):
         '''Reset the connection.
