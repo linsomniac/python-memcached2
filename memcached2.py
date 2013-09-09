@@ -825,6 +825,69 @@ class SelectorConsistentHashing(SelectorBase):
         raise NoAvailableServers()
 
 
+class ReconnectorBase:
+    '''Track server problems and determine when to reconnect.
+
+    This is a base class for classes that handle reconnecting to down
+    servers.  This tracks down servers have been having problems and
+    determining when to defer connecting and when to retry.
+
+    The Reconnector tracks problems with servers and defers connections
+    when it's been having problems.
+    '''
+
+    def connectable(self, server_url):
+        '''Is the specified server connectable?
+
+        :returns: boolean -- Returns whether a connection should be initiated.
+
+        :param server_url: Server to consult about connectability.
+        :type server_url: string: URL of server.
+        '''
+        raise NotImplementedError()
+
+    def had_error(self, server_url):
+        '''Called to report to the reconnector when there is an error on
+        a server.
+
+        :param server_url: Server related to this report.
+        :type server_url: string: URL of server.
+        '''
+        raise NotImplementedError()
+
+    def had_success(self, server_url):
+        '''Called when a successful communication occurs with a server.
+
+        :param server_url: Server related to this report.
+        :type server_url: string: URL of server.
+        '''
+        raise NotImplementedError()
+
+class ReconnectorSimple:
+    '''This is a simple reconnector that immediately tries connections on
+    down servers.
+    '''
+    def __init__(self):
+        self.server_data = {}
+
+    def connectable(self, server_url):
+        '''See :py:func:`memcached2.ReconnectorBase.select` for details of
+        this function.
+        '''
+        return True
+
+    def had_error(self, server_url):
+        '''See :py:func:`memcached2.ReconnectorBase.select` for details of
+        this function.
+        '''
+        pass
+
+    def had_success(self, server_url):
+        '''See :py:func:`memcached2.ReconnectorBase.select` for details of
+        this function.
+        '''
+        pass
+
 class Memcache:
     '''
     Create a new memcache connection, to the specified servers.
@@ -911,8 +974,8 @@ class Memcache:
             server to send the command to.  If None, `server` is expected
             to be set.
         :type key: str or None
-        :param server: The key within the command, used to determine what
-            server to send the command to.
+        :param server: Server to send the command on, if provided, the key
+            is not used for server selection.
         :type server: :py:class:`~memcached2.ServerConnection` instance
             or None.  If None, `key` is expected to be set to select which
             server to send the command to.
