@@ -31,6 +31,7 @@ Documentation Index
    exceptionsaremissesmappingclass
    hasherclass
    selectorclass
+   reconnectorclass
    valuesuperstrclass
    valuedictionaryclass
    memcacheclass

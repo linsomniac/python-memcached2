@@ -20,6 +20,7 @@ __copyright__ = 'Copyright (C) 2013 Sean Reifschneider, tummy.com, ltd.'
 __license__ = 'Apache'
 
 '''
+from datetime import time
 .. module:: memcached2
     :platform: Unix, Windows
     :synopsis: Next-generation memcache module for Python 2 and 3.
@@ -41,6 +42,7 @@ import re
 import socket
 import select
 import sys
+import time
 from binascii import crc32
 import collections
 from bisect import bisect
@@ -740,11 +742,6 @@ class SelectorFractalSharding(SelectorBase):
     attempt will be made to connect to any servers that are not currently
     up.
     '''
-    def __init__(self):
-        '''
-        '''
-        pass
-
     def select(self, server_list, hasher, key):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
@@ -901,22 +898,65 @@ class ReconnectorSimple:
         self.server_data = {}
 
     def connectable(self, server_url):
-        '''See :py:func:`memcached2.ReconnectorBase.select` for details of
-        this function.
+        '''See :py:func:`memcached2.ReconnectorBase.connectable` for
+        details of this function.
         '''
         return True
 
     def had_error(self, server_url):
-        '''See :py:func:`memcached2.ReconnectorBase.select` for details of
+        '''See :py:func:`memcached2.ReconnectorBase.error` for details of
         this function.
         '''
         pass
 
     def had_success(self, server_url):
-        '''See :py:func:`memcached2.ReconnectorBase.select` for details of
-        this function.
+        '''See :py:func:`memcached2.ReconnectorBase.had_success` for
+        details of this function.
         '''
         pass
+
+
+class ReconnectorTime:
+
+    '''Try reconnecting to a server after a specific number of seconds
+    since the last failed operation.
+    '''
+
+    def __init__(self, timeout=30):
+        '''
+        :param timeout: Number of seconds since last error.
+        :type timeout: float
+        '''
+        self.timeout = timeout
+        self.last_error = {}
+        return super(ReconnectorTime, self).__init__()
+
+    def connectable(self, server_url):
+        '''See :py:func:`memcached2.ReconnectorBase.connectable` for
+        details of this function.
+        '''
+        last_error = self.last_error.get(server_url)
+        if last_error is None:
+            return True
+        now = time.time()
+        if now - last_error >= self.timeout:
+            self.had_success(server_url)
+            return True
+        return False
+
+    def had_error(self, server_url):
+        '''See :py:func:`memcached2.ReconnectorBase.error` for details of
+        this function.
+        '''
+        if self.last_error.get(server_url) is not None:
+            return
+        self.last_error[server_url] = time.time()
+
+    def had_success(self, server_url):
+        '''See :py:func:`memcached2.ReconnectorBase.had_success` for
+        details of this function.
+        '''
+        del self.last_error[server_url]
 
 
 class Memcache:
