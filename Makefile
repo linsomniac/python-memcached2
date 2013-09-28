@@ -25,3 +25,4 @@ commit: check
 
 clean:
 	rm -rf __pycache__ tests/__pycache__ *.pyc tests/*.pyc docs/_build
+	rm -rf .ropeproject
