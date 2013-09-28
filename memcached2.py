@@ -55,6 +55,7 @@ if not PY33:
     ConnectionResetError = socket.error
 
     class BrokenPipeError(Exception):
+
         '''INTERNAL: Python 2 does not define this exception, so we
         create one of our own.'''
         pass
@@ -84,8 +85,7 @@ def _to_bool(s):
         return False
     if s in ['1', 'yes']:
         return True
-    raise NotImplementedError(
-            'Unknown boolean value {0}'.format(repr(s)))
+    raise NotImplementedError('Unknown boolean value {0}'.format(repr(s)))
 
 
 def _server_interaction(
@@ -102,11 +102,11 @@ def _server_interaction(
     read_sockets = [x for x in buffers_by_server.keys() if x.backend]
 
     write_sockets = [
-            x[0] for x in buffers_by_server.items()
-            if not send_threshold or len(x[1]) >= send_threshold]
+        x[0] for x in buffers_by_server.items()
+        if not send_threshold or len(x[1]) >= send_threshold]
 
     read_ready, write_ready = select.select(
-            read_sockets, write_sockets, [])[:2]
+        read_sockets, write_sockets, [])[:2]
 
     #  receive data from read-ready sockets
     for server in read_ready:
@@ -114,8 +114,8 @@ def _server_interaction(
             server.read_from_socket()
         except ServerDisconnect:
             return_exception = _deferred_exception(
-                    server, results, buffers_by_server, expected_keys,
-                    'ServerDisconnect received, probably server died')
+                server, results, buffers_by_server, expected_keys,
+                'ServerDisconnect received, probably server died')
 
         while server.line_available() and expected_keys[server]:
             line = server.read_until().rstrip()
@@ -123,8 +123,8 @@ def _server_interaction(
 
             if line.startswith('CLIENT_ERROR'):
                 return_exception = _deferred_exception(
-                        server, results, buffers_by_server, expected_keys,
-                        'CLIENT_ERROR received, possibly key is too long.')
+                    server, results, buffers_by_server, expected_keys,
+                    'CLIENT_ERROR received, possibly key is too long.')
 
             if line == 'STORED':
                 if return_successful:
@@ -164,26 +164,31 @@ def _dictionary_values_empty(d):
 
 
 class MemcachedException(Exception):
+
     '''Base exception that all other exceptions inherit from.
     This is never raised directly.'''
 
 
 class UnknownProtocol(MemcachedException):
+
     '''An unknown protocol was specified in the memcached URI.
     Sublcass of :class:`MemcachedException`.'''
 
 
 class InvalidURI(MemcachedException):
+
     '''An error was encountered in parsing the server URI.
     Subclass of :class:`MemcachedException`.'''
 
 
 class ServerDisconnect(MemcachedException):
+
     '''The connection to the server closed.
     Subclass of :class:`MemcachedException`.'''
 
 
 class NoAvailableServers(MemcachedException):
+
     '''There are no servers available to cache on, probably because all
     are disconnected.  This exception typically occurs after the code
     which would do a reconnection is run.
@@ -191,23 +196,27 @@ class NoAvailableServers(MemcachedException):
 
 
 class StoreException(MemcachedException):
+
     '''Base class for storage related exceptions.  Never raised directly.
     Subclass of :class:`MemcachedException`.'''
 
 
 class NotStored(StoreException):
+
     '''Item was not stored, but not due to an error.  Normally means the
     condition for an "add" or "replace" was not met..  Subclass of
     :class:`StoreException`.'''
 
 
 class CASFailure(StoreException):
+
     '''Item you are trying to store with a "cas" command has been modified
     since you last fetched it (result=EXISTS).  Subclass of
     :class:`StoreException`.'''
 
 
 class MultiStorageException(StoreException):
+
     '''During a SET operation the server returned CLIENT_ERROR.  This is
     probably due to too long of a key being used.  Subclass of
     :class:`StoreException`.'''
@@ -217,6 +226,7 @@ class MultiStorageException(StoreException):
 
 
 class CASRefreshFailure(CASFailure):
+
     '''When trying to refresh a CAS from the memcached, the retrieved value
     did not match the value sent with the last update.  This may happen if
     another process has updated the value.  Subclass of
@@ -224,26 +234,31 @@ class CASRefreshFailure(CASFailure):
 
 
 class NotFound(StoreException):
+
     '''Item you are trying to store with a "cas" command does not exist..
     Subclass of :class:`StoreException`.'''
 
 
 class NonNumeric(StoreException):
+
     '''The item you are trying to incr/decr is not numeric..
     Subclass of :class:`StoreException`.'''
 
 
 class RetrieveException(MemcachedException):
+
     '''Base class for retrieve related exceptions.  This is never raised
     directly..  Subclass of :class:`MemcachedException`.'''
 
 
 class NoValue(RetrieveException):
+
     '''Server has no data associated with this key..
     Subclass of :class:`RetrieveException`.'''
 
 
 class ExceptionsAreMissesMapping(collections.MutableMapping):
+
     '''A dictionary-like interface which swallows server exceptions.
 
     This is a dictionary-like interface to memcache, but it swallows
@@ -296,6 +311,7 @@ class ExceptionsAreMissesMapping(collections.MutableMapping):
 
 
 class ValueSuperStr(str):
+
     '''Wrapper around Memcache value results.
 
     This acts as a string normally, containing the value read from the
@@ -371,14 +387,14 @@ class ValueSuperStr(str):
             self.cas_unavailable = True
 
         retval = self.memcache.set(
-                self.key, value, flags=flags, exptime=exptime,
-                cas_unique=self.cas_unique)
+            self.key, value, flags=flags, exptime=exptime,
+            cas_unique=self.cas_unique)
 
         if self.cas_unique and update_cas:
             result = self.memcache.get(self.key)
             if result != value:
                 raise CASRefreshFailure(
-                        'Value from server changed during CAS refresh')
+                    'Value from server changed during CAS refresh')
             self.cas_unique = result.cas_unique
             self.cas_unavailable = False
 
@@ -479,6 +495,7 @@ class ValueSuperStr(str):
 
 
 class ValueDictionary(dict):
+
     '''Encode the response as a dictionary.
 
     This is a simple dictionary of the result data from the memcache
@@ -506,15 +523,16 @@ class ValueDictionary(dict):
         :returns: :py:class:`~memcached2.ValueSuperStr` instance
         '''
         return super(ValueDictionary, self).__init__(
-                [
-                    ['key', key],
-                    ['value', value],
-                    ['flags', flags],
-                    ['cas_unique', cas_unique]
-                ])
+            [
+                ['key', key],
+                ['value', value],
+                ['flags', flags],
+                ['cas_unique', cas_unique]
+            ])
 
 
 class HasherBase:
+
     '''Turn memcache keys into hashes, for use in server selection.
 
     Normally, the python-memcached2 classes will automatically select a
@@ -543,6 +561,7 @@ class HasherBase:
 
 
 class HasherZero(HasherBase):
+
     '''Hasher that always returns 0, useful only for
     :py:class:`~memcached2.SelectorFirst`.'''
     def hash(self, key):
@@ -553,6 +572,7 @@ class HasherZero(HasherBase):
 
 
 class HasherCMemcache(HasherBase):
+
     '''Hasher compatible with the C memcache hash function.'''
     def hash(self, key):
         '''See :py:func:`memcached2.HasherBase.hash` for details of
@@ -563,6 +583,7 @@ class HasherCMemcache(HasherBase):
 
 
 class ServerPool:
+
     '''A pool of servers that connections can be checked in/out from.
 
     Implements a thread-safe pool for storing server connections.  This
@@ -570,7 +591,7 @@ class ServerPool:
     Fewer connections may be needed because of this.
     '''
 
-    def __init__(self, server_url_list = []):
+    def __init__(self, server_url_list=[]):
         '''Initialize ServerPool.
         '''
         self.server_pools = {}
@@ -605,7 +626,9 @@ class ServerPool:
         '''
         self.server_pools[connection.uri].put(connection)
 
+
 class SelectorBase:
+
     '''Select which server to use.
 
     These classes implement a variety of algorithms for determining which
@@ -646,6 +669,7 @@ class SelectorBase:
 
 
 class SelectorFirst(SelectorBase):
+
     '''Server selector that only returns the first server.  Useful when there
     is only one server to select amongst.
     '''
@@ -660,6 +684,7 @@ class SelectorFirst(SelectorBase):
 
 
 class SelectorRehashDownServers(SelectorBase):
+
     '''Select a server, if it is down re-hash up to `hashing_retries` times.
 
     This was the default in the original python-memcached module.  If the
@@ -699,6 +724,7 @@ class SelectorRehashDownServers(SelectorBase):
 
 
 class SelectorFractalSharding(SelectorBase):
+
     '''On a down server, re-partition that servers keyspace to other servers.
 
     This uses an algorithm that basically maps every key in the keyspace to
@@ -744,6 +770,7 @@ class SelectorFractalSharding(SelectorBase):
 
 
 class SelectorConsistentHashing(SelectorBase):
+
     '''Predictably select a server, even if its normal server is down.
 
     This implements the Consistent Hash algorithm as
@@ -826,6 +853,7 @@ class SelectorConsistentHashing(SelectorBase):
 
 
 class ReconnectorBase:
+
     '''Track server problems and determine when to reconnect.
 
     This is a base class for classes that handle reconnecting to down
@@ -863,7 +891,9 @@ class ReconnectorBase:
         '''
         raise NotImplementedError()
 
+
 class ReconnectorSimple:
+
     '''This is a simple reconnector that immediately tries connections on
     down servers.
     '''
@@ -888,7 +918,9 @@ class ReconnectorSimple:
         '''
         pass
 
+
 class Memcache:
+
     '''
     Create a new memcache connection, to the specified servers.
 
@@ -1041,7 +1073,7 @@ class Memcache:
 
         if not data.startswith('VALUE'):
             raise NotImplementedError(
-                    'Unknown response: {0}'.format(repr(data[:30])))
+                'Unknown response: {0}'.format(repr(data[:30])))
 
         value_data = data.rstrip().split()[1:]
 
@@ -1058,12 +1090,12 @@ class Memcache:
         data = server.read_until()   # trailing termination
         if data != '\r\n':
             raise NotImplementedError(
-                    'Unexpected response when looking for terminator: {0}'
-                    .format(data))
+                'Unexpected response when looking for terminator: {0}'
+                .format(data))
 
         if self.value_wrapper:
             return key, self.value_wrapper(
-                    body, key, flags, cas_unique, memcache=self)
+                body, key, flags, cas_unique, memcache=self)
         return key, body
 
     def get(self, key, get_cas=False):
@@ -1092,7 +1124,7 @@ class Memcache:
         data = server.read_until()
         if data != 'END\r\n':
             raise NotImplementedError(
-                    'Unknown response: {0}'.format(repr(data[:30])))
+                'Unknown response: {0}'.format(repr(data[:30])))
 
         return value
 
@@ -1156,11 +1188,11 @@ class Memcache:
         '''
         if cas_unique is not None:
             command = 'cas {0} {1} {2} {3} {4}\r\n'.format(
-                    key, flags, exptime, len(value),
-                    cas_unique) + value + '\r\n'
+                key, flags, exptime, len(value),
+                cas_unique) + value + '\r\n'
         else:
             command = 'set {0} {1} {2} {3}\r\n'.format(
-                    key, flags, exptime, len(value)) + value + '\r\n'
+                key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def _buffer_data(
@@ -1194,13 +1226,13 @@ class Memcache:
         expected_keys[server].append(key)
         if key_options['cas_unique'] is not None:
             output_buffer.extend(_to_bytes(
-                    'cas {0} {1} {2} {3} {4}\r\n'.format(
+                'cas {0} {1} {2} {3} {4}\r\n'.format(
                     key, key_options['flags'], key_options['exptime'],
                     len(value),
                     key_options['cas_unique'])))
         else:
             output_buffer.extend(_to_bytes(
-                    'set {0} {1} {2} {3}\r\n'.format(
+                'set {0} {1} {2} {3}\r\n'.format(
                     key, key_options['flags'], key_options['exptime'],
                     len(value))))
         output_buffer.extend(_to_bytes(value))
@@ -1252,24 +1284,24 @@ class Memcache:
         deferred_exception = None
 
         base_options = {
-                'flags': 0,
-                'exptime': 0,
-                'cas_unique': None}
+            'flags': 0,
+            'exptime': 0,
+            'cas_unique': None}
         base_options.update(options)
 
         for to_send in data:
             self._buffer_data(
-                    output_buffers, to_send, base_options,
-                    nonblocking_servers, expected_keys)
+                output_buffers, to_send, base_options,
+                nonblocking_servers, expected_keys)
 
             #  send data and read any ready data
             if [
                     x for x in output_buffers.values()
                     if len(x) >= send_threshold]:
                 had_exception = _server_interaction(
-                        output_buffers, send_threshold, send_minimum,
-                        expected_keys, results,
-                        return_successful, return_failed)
+                    output_buffers, send_threshold, send_minimum,
+                    expected_keys, results,
+                    return_successful, return_failed)
                 if had_exception:
                     deferred_exception = had_exception
 
@@ -1277,8 +1309,8 @@ class Memcache:
         while (_dictionary_values_empty(output_buffers)
                 or _dictionary_values_empty(expected_keys)):
             had_exception = _server_interaction(
-                    output_buffers, 0, 0, expected_keys, results,
-                    return_successful, return_failed)
+                output_buffers, 0, 0, expected_keys, results,
+                return_successful, return_failed)
             if had_exception:
                 deferred_exception = had_exception
 
@@ -1331,7 +1363,7 @@ class Memcache:
         :type exptime: int
         '''
         command = 'add {0} {1} {2} {3}\r\n'.format(
-                key, flags, exptime, len(value)) + value + '\r\n'
+            key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def replace(self, key, value, flags=0, exptime=0):
@@ -1350,7 +1382,7 @@ class Memcache:
         :type exptime: int
         '''
         command = 'replace {0} {1} {2} {3}\r\n'.format(
-                key, flags, exptime, len(value)) + value + '\r\n'
+            key, flags, exptime, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def append(self, key, value):
@@ -1363,7 +1395,7 @@ class Memcache:
         :type value: str
         '''
         command = 'append {0} 0 0 {1}\r\n'.format(
-                key, len(value)) + value + '\r\n'
+            key, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def prepend(self, key, value):
@@ -1376,7 +1408,7 @@ class Memcache:
         :type value: str
         '''
         command = 'prepend {0} 0 0 {1}\r\n'.format(
-                key, len(value)) + value + '\r\n'
+            key, len(value)) + value + '\r\n'
         self._storage_command(command, key)
 
     def delete(self, key):
@@ -1401,7 +1433,7 @@ class Memcache:
             return False
 
         raise NotImplementedError(
-                'Unknown return data from server: "{0}"'.format(repr(data)))
+            'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def delete_all(self, key):
         '''Delete the key from all servers if it exists.
@@ -1431,8 +1463,8 @@ class Memcache:
                 pass
             else:
                 raise NotImplementedError(
-                        'Unknown return data from server: "{0}"'
-                        .format(repr(data)))
+                    'Unknown return data from server: "{0}"'
+                    .format(repr(data)))
 
         return found_key
 
@@ -1460,7 +1492,7 @@ class Memcache:
             raise NotFound()
 
         raise NotImplementedError(
-                'Unknown return data from server: "{0}"'.format(repr(data)))
+            'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def _reconnect_all(self):
         '''INTERNAL: Attempt to connect to all backend servers.'''
@@ -1486,8 +1518,8 @@ class Memcache:
 
             if data != 'OK\r\n':
                 raise NotImplementedError(
-                        'Unknown return data from server: "{0}"'
-                        .format(repr(data)))
+                    'Unknown return data from server: "{0}"'
+                    .format(repr(data)))
 
     def _run_multi_server(self, function):
         '''INTERNAL: Run statistics `function()` on each server.
@@ -1545,7 +1577,7 @@ class Memcache:
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
                     raise NotImplementedError(
-                            'Unknown stats data: {0}'.format(repr(data)))
+                        'Unknown stats data: {0}'.format(repr(data)))
                 if key in (
                         [
                             'pid', 'uptime', 'time', 'pointer_size',
@@ -1606,11 +1638,11 @@ class Memcache:
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
                     raise NotImplementedError(
-                            'Unknown stats data: {0}'.format(repr(data)))
+                        'Unknown stats data: {0}'.format(repr(data)))
                 prefix, slab_key, stat_key = key.split(':')
                 if prefix != 'items':
                     raise NotImplementedError(
-                            'Unknown stats item: {0}'.format(repr(key)))
+                        'Unknown stats item: {0}'.format(repr(key)))
                 if not slab_key in stats:
                     stats[slab_key] = {}
                 if stat_key in (
@@ -1662,7 +1694,7 @@ class Memcache:
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
                     raise NotImplementedError(
-                            'Unknown stats data: {0}'.format(repr(data)))
+                        'Unknown stats data: {0}'.format(repr(data)))
 
                 if ':' in key:
                     slab_key, stat_key = key.split(':')
@@ -1720,7 +1752,7 @@ class Memcache:
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
                     raise NotImplementedError(
-                            'Unknown stats data: {0}'.format(repr(data)))
+                        'Unknown stats data: {0}'.format(repr(data)))
                 if key in (
                         [
                             'maxbytes', 'maxconns', 'tcpport', 'udpport',
@@ -1781,7 +1813,7 @@ class Memcache:
                 prefix, key, value = data.strip().split()
                 if prefix != 'STAT':
                     raise NotImplementedError(
-                            'Unknown stats data: {0}'.format(repr(data)))
+                        'Unknown stats data: {0}'.format(repr(data)))
                 stats.append((int(key), int(value)))
 
             return stats
@@ -1840,13 +1872,13 @@ class Memcache:
         if data == 'NOT_FOUND\r\n':
             raise NotFound()
         client_error = (
-                'CLIENT_ERROR cannot increment or decrement '
-                'non-numeric value\r\n')
+            'CLIENT_ERROR cannot increment or decrement '
+            'non-numeric value\r\n')
         if data == client_error:
             raise NonNumeric()
 
         raise NotImplementedError(
-                'Unknown return data from server: "{0}"'.format(repr(data)))
+            'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def _storage_command(self, command, key):
         '''INTERNAL: Send storage command to server and parse results.
@@ -1875,7 +1907,7 @@ class Memcache:
             raise NotFound()
 
         raise NotImplementedError(
-                'Unknown return data from server: "{0}"'.format(repr(data)))
+            'Unknown return data from server: "{0}"'.format(repr(data)))
 
     def close(self):
         '''Close the connection to all the backend servers.
@@ -1886,6 +1918,7 @@ class Memcache:
 
 
 class ExceptionsAreMissesMemcache(Memcache):
+
     '''
     A :py:class:`~memcached.Memcache` wrapper class which swallows
     server exceptions, except in the case of coding errors.  This is
@@ -1964,6 +1997,7 @@ class ExceptionsAreMissesMemcache(Memcache):
 
 
 class ServerConnection:
+
     '''Low-level communication with the memcached server.
 
     Data should be passed in as strings, and that is converted to `bytes`
@@ -2042,8 +2076,8 @@ class ServerConnection:
         '''
 
         m = re.match(
-                r'memcached://(?P<host>[^:]+)(:(?P<port>[0-9]+))?/',
-                self.uri)
+            r'memcached://(?P<host>[^:]+)(:(?P<port>[0-9]+))?/',
+            self.uri)
         if m:
             group = m.groupdict()
             port = group.get('port')
@@ -2071,14 +2105,14 @@ class ServerConnection:
         if self.parsed_uri['protocol'] == 'memcached':
             self.backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.backend.connect(
-                    (self.parsed_uri['host'], self.parsed_uri['port']))
+                (self.parsed_uri['host'], self.parsed_uri['port']))
             if not self.backend.setblocking:
                 self.backend.setblocking(self.is_blocking)
             return
 
         raise UnknownProtocol(
-                'Unknown connection protocol: {0}'
-                .format(self.parsed_uri['protocol']))
+            'Unknown connection protocol: {0}'
+            .format(self.parsed_uri['protocol']))
 
     def send_command(self, command):
         '''Write an ASCII command to the memcached server.

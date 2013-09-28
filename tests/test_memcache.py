@@ -33,13 +33,14 @@ import os
 
 
 class test_Memcache(unittest.TestCase):
+
     def setUp(self):
         mctestsupp.flush_local_memcache(self)
 
     def test_SetAndGet(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/',),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost/',),
+            value_wrapper=memcached2.ValueSuperStr)
 
         with self.assertRaises(memcached2.NoValue):
             result = memcache.get('foo')
@@ -53,8 +54,8 @@ class test_Memcache(unittest.TestCase):
 
     def test_ValueSuperStr(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/',),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost/',),
+            value_wrapper=memcached2.ValueSuperStr)
 
         memcache.set('foo', 'bar')
         result = memcache.get('foo')
@@ -102,8 +103,8 @@ class test_Memcache(unittest.TestCase):
 
     def test_ValueSuperStrCAS(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/',),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost/',),
+            value_wrapper=memcached2.ValueSuperStr)
 
         memcache.set('foo', 'testing')
         result = memcache.get('foo', get_cas=True)
@@ -123,15 +124,15 @@ class test_Memcache(unittest.TestCase):
         self.assertEqual(memcache.get('foo'), 'test3')
 
         server = CommandServer(
-                [
-                    RECEIVE, 'STORED\r\n',
-                    RECEIVE, 'VALUE foo 0 7 3137\r\ntesting\r\nEND\r\n',
-                    RECEIVE, 'STORED\r\n',
-                    RECEIVE, 'VALUE foo 0 7 3173\r\nhacking\r\nEND\r\n',
-                ])
+            [
+                RECEIVE, 'STORED\r\n',
+                RECEIVE, 'VALUE foo 0 7 3137\r\ntesting\r\nEND\r\n',
+                RECEIVE, 'STORED\r\n',
+                RECEIVE, 'VALUE foo 0 7 3173\r\nhacking\r\nEND\r\n',
+            ])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         memcache.set('foo', 'testing')
         result = memcache.get('foo', get_cas=True)
@@ -141,8 +142,8 @@ class test_Memcache(unittest.TestCase):
 
     def test_ValueDictionary(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/',),
-                value_wrapper=memcached2.ValueDictionary)
+            ('memcached://localhost/',),
+            value_wrapper=memcached2.ValueDictionary)
 
         memcache.set('foo', 'bar')
         result = memcache.get('foo')
@@ -156,12 +157,12 @@ class test_Memcache(unittest.TestCase):
         self.assertEqual(result['value'], 'testing')
         self.assertNotIn(result['cas_unique'], [None, 0])
         memcache.set(
-                result.get('key'), 'test2', cas_unique=result['cas_unique'])
+            result.get('key'), 'test2', cas_unique=result['cas_unique'])
         self.assertEqual(memcache.get('foo')['value'], 'test2')
         with self.assertRaises(memcached2.CASFailure):
             memcache.set(
-                    result.get('key'), 'test3',
-                    cas_unique=result['cas_unique'])
+                result.get('key'), 'test3',
+                cas_unique=result['cas_unique'])
         self.assertEqual(memcache.get('foo')['value'], 'test2')
 
         memcache.close()
@@ -169,45 +170,45 @@ class test_Memcache(unittest.TestCase):
     def test_SetAndGetWithErrors(self):
         server = CommandServer([])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),))
+            ('memcached://localhost:{0}/'.format(server.port),))
         with self.assertRaises(memcached2.ServerDisconnect):
             memcache.set('foo', 'bar')
 
         server = CommandServer([RECEIVE])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),))
+            ('memcached://localhost:{0}/'.format(server.port),))
         with self.assertRaises(memcached2.ServerDisconnect):
             memcache.set('foo', 'bar')
 
         server = CommandServer([RECEIVE, 'STORED\r\n'])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),))
+            ('memcached://localhost:{0}/'.format(server.port),))
         memcache.set('foo', 'bar')
         with self.assertRaises(memcached2.ServerDisconnect):
             memcache.get('foo')
 
         server = CommandServer([RECEIVE, 'STORED\r\n', RECEIVE])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),))
+            ('memcached://localhost:{0}/'.format(server.port),))
         memcache.set('foo', 'bar')
         with self.assertRaises(memcached2.ServerDisconnect):
             memcache.get('foo')
 
         server = CommandServer(
-                [
-                    RECEIVE, 'STORED\r\n', RECEIVE,
-                    'VALUE foo 0 3\r\nbar\r\nEND\r\n'
-                ])
+            [
+                RECEIVE, 'STORED\r\n', RECEIVE,
+                'VALUE foo 0 3\r\nbar\r\nEND\r\n'
+            ])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),))
+            ('memcached://localhost:{0}/'.format(server.port),))
         memcache.set('foo', 'bar')
         memcache.get('foo')
 
     @unittest.skipIf('SKIP_SLOW_TESTS' in os.environ, 'Requested fast tests')
     def test_TestFlagsAndExptime(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/',),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost/',),
+            value_wrapper=memcached2.ValueSuperStr)
 
         memcache.set('foo', 'xXx', flags=12, exptime=1)
         result = memcache.get('foo')
@@ -249,8 +250,8 @@ class test_Memcache(unittest.TestCase):
 
     def test_Cas(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/',),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost/',),
+            value_wrapper=memcached2.ValueSuperStr)
         memcache.set('foo', 'bar')
         result = memcache.get('foo', get_cas=True)
 
@@ -274,7 +275,7 @@ class test_Memcache(unittest.TestCase):
 
     def test_DeleteAll(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/', 'memcached://localhost/',))
+            ('memcached://localhost/', 'memcached://localhost/',))
         memcache.set('foo', 'bar')
         self.assertEqual(memcache.delete_all('foo'), True)
         self.assertEqual(memcache.delete_all('foo'), False)
@@ -329,10 +330,10 @@ class test_Memcache(unittest.TestCase):
 
     def test_SeveralServers(self):
         memcache = memcached2.Memcache(
-                (
-                    'memcached://localhost/', 'memcached://localhost/',
-                    'memcached://localhost/', 'memcached://localhost/',
-                ))
+            (
+                'memcached://localhost/', 'memcached://localhost/',
+                'memcached://localhost/', 'memcached://localhost/',
+            ))
 
         memcache.flush_all()
 
@@ -364,6 +365,7 @@ class test_Memcache(unittest.TestCase):
         memcache.flush_all()
 
         class Doubler:
+
             def __init__(self):
                 self.old_value = 1
 
@@ -386,7 +388,7 @@ class test_Memcache(unittest.TestCase):
 
     def test_GetMulti(self):
         memcache = memcached2.Memcache((
-                'memcached://localhost/', 'memcached://localhost/'))
+            'memcached://localhost/', 'memcached://localhost/'))
         memcache.flush_all()
 
         for i in range(10):
@@ -399,7 +401,7 @@ class test_Memcache(unittest.TestCase):
 
     def test_SetMulti(self):
         memcache = memcached2.Memcache(
-                ('memcached://localhost/', 'memcached://localhost/'))
+            ('memcached://localhost/', 'memcached://localhost/'))
         memcache.flush_all()
 
         data = []
@@ -422,8 +424,8 @@ class test_Memcache(unittest.TestCase):
         data = []
         for i in range(10000):
             data.append(
-                    ('longer_key_than_the_other_test{0}'.format(i),
-                        '!' * (i % 4000)))
+                ('longer_key_than_the_other_test{0}'.format(i),
+                 '!' * (i % 4000)))
 
         results = memcache.set_multi(data, return_successful=False)
 
@@ -437,32 +439,32 @@ class test_Memcache(unittest.TestCase):
 
         server = CommandServer([])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data)
 
         server = CommandServer([RECEIVE])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data)
 
         server = CommandServer([RECEIVE, 'STORED\r\n' * 9])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         with self.assertRaises(memcached2.MultiStorageException):
             results = memcache.set_multi(data)
 
         server = CommandServer([RECEIVE, 'STORED\r\n' * 10])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
         self.assertEqual(len(results), 10)
@@ -470,10 +472,10 @@ class test_Memcache(unittest.TestCase):
         self.assertIn('key9', results)
 
         server = CommandServer(
-                [RECEIVE, ('STORED\r\n' * 5) + 'CLIENT_ERROR Failed\r\n'])
+            [RECEIVE, ('STORED\r\n' * 5) + 'CLIENT_ERROR Failed\r\n'])
         memcache = memcached2.Memcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         try:
             memcache.set_multi(data)
@@ -485,38 +487,38 @@ class test_Memcache(unittest.TestCase):
 
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((
-                'memcached://localhost/', 'memcached://localhost/',))
+            'memcached://localhost/', 'memcached://localhost/',))
 
         data = list(memcache._keys_by_server(['a', 'b', 'c', 'd', 'e', 'f']))
         self.assertEqual(
-                (sorted((data[0][1], data[1][1]))),
-                [['a', 'c', 'd', 'f'], ['b', 'e']])
+            (sorted((data[0][1], data[1][1]))),
+            [['a', 'c', 'd', 'f'], ['b', 'e']])
 
     def test_repr(self):
         server = memcached2.ServerConnection('memcached://localhost/')
         self.assertEqual(
-                repr(server), '<ServerConnection to memcached://localhost/>')
+            repr(server), '<ServerConnection to memcached://localhost/>')
 
     def test_SelectorFractalSharding(self):
         memcache = memcached2.Memcache((
-                'memcached://localhost/', 'memcached://localhost/',),
-                selector=memcached2.SelectorFractalSharding())
+            'memcached://localhost/', 'memcached://localhost/',),
+            selector=memcached2.SelectorFractalSharding())
 
         for i in range(10):
             memcache.set(str(i), '*' * i)
 
     def test_SelectorRehashDownServers(self):
         memcache = memcached2.Memcache((
-                'memcached://localhost/', 'memcached://localhost/',),
-                selector=memcached2.SelectorRehashDownServers())
+            'memcached://localhost/', 'memcached://localhost/',),
+            selector=memcached2.SelectorRehashDownServers())
 
         for i in range(10):
             memcache.set(str(i), '*' * i)
 
     def test_SelectorConsistentHashing(self):
         memcache = memcached2.Memcache((
-                'memcached://localhost/', 'memcached://localhost/',),
-                selector=memcached2.SelectorConsistentHashing())
+            'memcached://localhost/', 'memcached://localhost/',),
+            selector=memcached2.SelectorConsistentHashing())
 
         for i in range(10):
             memcache.set(str(i), '*' * i)

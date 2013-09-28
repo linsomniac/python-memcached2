@@ -31,12 +31,13 @@ from faketcpserver import RECEIVE, CommandServer
 
 
 class test_ExceptionsAreMissesMapper(unittest.TestCase):
+
     def setUp(self):
         mctestsupp.flush_local_memcache(self)
 
     def test_Basics(self):
         dic = memcached2.ExceptionsAreMissesMapping(
-                ('memcached://localhost/',))
+            ('memcached://localhost/',))
 
         with self.assertRaises(NotImplementedError):
             for x in dic:

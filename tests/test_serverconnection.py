@@ -31,6 +31,7 @@ import memcached2
 
 
 class test_ServerConnection(unittest.TestCase):
+
     def setUp(self):
         mctestsupp.flush_local_memcache(self)
 
@@ -68,7 +69,7 @@ class test_ServerConnection(unittest.TestCase):
     def test_ServerFlushDisconnect(self):
         server = CommandServer([RECEIVE])
         sc = memcached2.ServerConnection(
-                'memcached://127.0.0.1:{0}/'.format(server.port))
+            'memcached://127.0.0.1:{0}/'.format(server.port))
         sc.connect()
         sc.send_command('flush_all\r\n')
         with self.assertRaises(memcached2.ServerDisconnect):
@@ -77,7 +78,7 @@ class test_ServerConnection(unittest.TestCase):
 
         server = CommandServer([])
         sc = memcached2.ServerConnection(
-                'memcached://127.0.0.1:{0}/'.format(server.port))
+            'memcached://127.0.0.1:{0}/'.format(server.port))
         sc.connect()
         sc.send_command('flush_all\r\n')
         with self.assertRaises(memcached2.ServerDisconnect):

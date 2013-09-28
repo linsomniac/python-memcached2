@@ -31,12 +31,13 @@ from faketcpserver import RECEIVE, CommandServer
 
 
 class test_ExceptionsAreMissesMemcache(unittest.TestCase):
+
     def setUp(self):
         mctestsupp.flush_local_memcache(self)
 
     def test_Basics(self):
         mc = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost/',))
+            ('memcached://localhost/',))
 
         self.assertEqual(mc.get('foo'), None)
         mc.set('foo', 'hello')
@@ -47,7 +48,7 @@ class test_ExceptionsAreMissesMemcache(unittest.TestCase):
 
     def test_SetMulti(self):
         memcache = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost/', 'memcached://localhost/'))
+            ('memcached://localhost/', 'memcached://localhost/'))
 
         data = []
         for i in range(10):
@@ -66,24 +67,24 @@ class test_ExceptionsAreMissesMemcache(unittest.TestCase):
 
         server = CommandServer([])
         memcache = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
         self.assertEqual(len(results), 0)
 
         server = CommandServer([RECEIVE])
         memcache = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
         self.assertEqual(len(results), 0)
 
         server = CommandServer([RECEIVE, 'STORED\r\n' * 9])
         memcache = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
         self.assertIn('key0', results)
@@ -92,18 +93,18 @@ class test_ExceptionsAreMissesMemcache(unittest.TestCase):
 
         server = CommandServer([RECEIVE, 'STORED\r\n' * 10])
         memcache = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
         self.assertIn('key0', results)
         self.assertIn('key9', results)
 
         server = CommandServer(
-                [RECEIVE, ('STORED\r\n' * 5) + 'CLIENT_ERROR Failed\r\n'])
+            [RECEIVE, ('STORED\r\n' * 5) + 'CLIENT_ERROR Failed\r\n'])
         memcache = memcached2.ExceptionsAreMissesMemcache(
-                ('memcached://localhost:{0}/'.format(server.port),),
-                value_wrapper=memcached2.ValueSuperStr)
+            ('memcached://localhost:{0}/'.format(server.port),),
+            value_wrapper=memcached2.ValueSuperStr)
 
         results = memcache.set_multi(data)
         self.assertTrue(results['key5'].startswith('CLIENT_ERROR'))
