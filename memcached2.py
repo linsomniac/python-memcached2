@@ -593,13 +593,22 @@ class ServerPool:
     Fewer connections may be needed because of this.
     '''
 
-    def __init__(self, server_url_list=[]):
-        '''Initialize ServerPool.
+    def __init__(self, reconnector=None):
+        '''Initialize ServerPool instance.
+
+        :param reconnector: The reconnector instance used by the pool
+                to determine when a re-connection to a server will be
+                attempted.  If `None`, a default
+                :py:class:`~memcached2.ReconnectorTime` will be created.
+        :type reconnector: :py:class:`~memcached2.ReconnectorBase`
         '''
         self.server_pools = {}
+        if reconnector is None:
+            reconnector = ReconnectorTime()
+        self.reconnector = reconnector
 
     def _add(self, server_url):
-        '''INTERNAL: Add the specified server to the list.
+        '''INTERNAL: Add the specified server to the pool list.
         '''
         if server_url in self.server_pools:
             return
@@ -615,10 +624,14 @@ class ServerPool:
         '''
         self._add(server_url)
         pool = self.server_pools[server_url]
-        try:
-            return pool.get_nowait()
-        except queue.Empty:
-            return ServerConnection(server_url)
+
+        if not pool.empty():
+            try:
+                return pool.get_nowait()
+            except queue.Empty:
+                pass
+
+        return ServerConnection(server_url)
 
     def put(self, connection):
         '''Return a connection to the pool.
@@ -626,7 +639,9 @@ class ServerPool:
         :param connection: Connection to return to the queue.
         :type connection: :py:class:`~memcache2.ServerConnection`
         '''
-        self.server_pools[connection.uri].put(connection)
+        server_url = connection.uri
+        self.__add(server_url)
+        self.server_pools[server_url].put(connection)
 
 
 class SelectorBase:
