@@ -1066,6 +1066,14 @@ class Memcache:
     def __del__(self):
         self.close()
 
+    def _select_server(self, key):
+        '''INTERNAL: Given a key, find the server that serves that key.
+
+        :returns: :py:class:`~memcached2.ServerConnection` -- The server object
+            that the command was sent to.
+        '''
+        return self._select_server(key)
+
     def _send_command(self, command, key=None, server=None):
         '''INTERNAL: Send a command to a server.
 
@@ -1086,10 +1094,10 @@ class Memcache:
         :raises: :py:exc:`~memcached2.NoAvailableServers`,
             :py:exc:`~memcached2.ServerDisconnect`
         '''
-        command = _to_bytes(command)
         if not server:
-            server = self.selector.select(self.servers, self.hasher.hash, key)
+            server = self._select_server(key)
 
+        command = _to_bytes(command)
         try:
             server.send_command(command)
         except ConnectionResetError:
@@ -1122,7 +1130,7 @@ class Memcache:
         '''
         server_map = collections.defaultdict(list)
         for key in keys:
-            server = self.selector.select(self.servers, self.hasher.hash, key)
+            server = self._select_server(key)
             server_map[server].append(key)
         return server_map.items()
 
@@ -1284,7 +1292,7 @@ class Memcache:
             base_options.update(to_send[2])
 
         #  find server for command
-        server = self.selector.select(self.servers, self.hasher.hash, key)
+        server = self._select_server(key)
         if not server in nonblocking_servers:
             nonblocking_servers.add(server)
             server.setblocking(False)
