@@ -974,6 +974,10 @@ class ReconnectorTime:
         del self.last_error[server_url]
 
 
+#  the global pool object
+_global_pool = ServerPool()
+
+
 class Memcache:
 
     '''
@@ -1001,29 +1005,34 @@ class Memcache:
     '''
 
     def __init__(
-            self, servers, selector=None, hasher=None, value_wrapper=None):
+            self, servers, value_wrapper=None, selector=None, hasher=None,
+            server_pool=None):
         '''
         :param servers: One or more server URIs of the form:
             "memcache://hostname[:port]/"
         :type servers: list
-        :param selector: (None) A "Selector" class object.  This code
-            implements the server selector logic.  If not specified, the
-            default is used.  The default is to use
-            :py:class:`~memcached2.SelectorFirst` if only one server is
-            specified, and :py:class:`~memcached2.SelectorRehashDownServers`
+        :param value_wrapper: (None)  This causes values returned to be
+            wrapped in the passed class before being returned.  For example
+            :py:class:`~memcache2.ValueSuperStr` implements many useful
+            additions to the string return.
+        :type value_wrapper: :py:class:`~memcache2.ValueSuperStr` or
+            compatible object.
+        :param selector: (None)  This code implements the server selector
+            logic.  If not specified, the default is used.  The default
+            is to use :py:class:`~memcached2.SelectorFirst` if only one
+            server is specified, and
+            :py:class:`~memcached2.SelectorRehashDownServers`
             if multiple servers are given.
-        :type selector: "Selector" class object.
+        :type selector: :py:class:`~memcache2.SelectorBase`
         :param hasher: (None) A "Hash" object which takes a key and returns
             a hash for persistent server selection.  If not specified, it
             defaults to :py:class:`~memcache2.HasherZero` if there is only
             one server specified, or :py:class:`~memcache2.HasherCMemcache`
             otherwise.
-        :type hasher: "Hash" class object.
-        :param value_wrapper: (None) A "Value" class.  This causes values
-            returned to be wrapped in the passed class before being returned.
-            For example :py:class:`~memcache2.ValueSuperStr` implements many
-            useful additions to the string return.
-        :type value_wrapper: "Value" class object.
+        :type hasher: :py:class:`~memcache2.HasherBase`
+        :param server_pool: (None) A server connection pool.  If not
+            specified, a global pool is used.
+            :type server_pool: :py:class:`~memcache2.ServerPool` object.
         '''
 
         self.servers = [ServerConnection(x) for x in servers]
@@ -1047,6 +1056,12 @@ class Memcache:
                 self.selector = SelectorRehashDownServers()
             else:
                 self.selector = SelectorFractalSharding()
+
+        if server_pool is not None:
+            self.server_pool = server_pool
+        else:
+            global _global_pool
+            self.server_pool = _global_pool
 
     def __del__(self):
         self.close()
