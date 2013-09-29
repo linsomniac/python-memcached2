@@ -524,7 +524,7 @@ class ValueDictionary(dict):
         :type memcache: :py:class:`~memcache2.ServerConnection`
         :returns: :py:class:`~memcached2.ValueSuperStr` instance
         '''
-        return super(ValueDictionary, self).__init__(
+        super(ValueDictionary, self).__init__(
             [
                 ['key', key],
                 ['value', value],
@@ -607,23 +607,37 @@ class ServerPool:
             reconnector = ReconnectorTime()
         self.reconnector = reconnector
 
-    def _add(self, server_url):
+    def _add(self, server_uri):
         '''INTERNAL: Add the specified server to the pool list.
         '''
-        if server_url in self.server_pools:
+        if server_uri in self.server_pools:
             return
-        self.server_pools[server_url] = queue.Queue()
+        self.server_pools[server_uri] = queue.Queue()
 
-    def get(self, server_url):
+    def is_available(self, server_uri):
+        '''Is the server available for use.  This checks internal state to
+        determine if a server should try to be used.
+
+        :param server_uri: The URI for the server to check.
+        :type server_uri: str
+        :returns: boolean -- True if the server is available for use.
+        '''
+        self._add(server_uri)
+
+        if not self.server_pools[server_uri].empty():
+            return True
+        return self.reconnector.connectable(server_uri)
+
+    def get(self, server_uri):
         '''Retrieve a server for use.  Either pulling it from the queue or
         making a new connection object.
 
-        :param server_url: The URL for the server we need a connection to.
-        :type server_url: str
+        :param server_uri: The URI for the server we need a connection to.
+        :type server_uri: str
         :returns: ServerConnection -- Server connection to use.
         '''
-        self._add(server_url)
-        pool = self.server_pools[server_url]
+        self._add(server_uri)
+        pool = self.server_pools[server_uri]
 
         if not pool.empty():
             try:
@@ -631,7 +645,8 @@ class ServerPool:
             except queue.Empty:
                 pass
 
-        return ServerConnection(server_url)
+        server = ServerConnection(server_uri)
+        return server
 
     def put(self, connection):
         '''Return a connection to the pool.
@@ -639,9 +654,11 @@ class ServerPool:
         :param connection: Connection to return to the queue.
         :type connection: :py:class:`~memcache2.ServerConnection`
         '''
-        server_url = connection.uri
-        self.__add(server_url)
-        self.server_pools[server_url].put(connection)
+        if connection.buffer:
+            raise ValueError('Socket returned to pool with data waiting')
+        server_uri = connection.uri
+        self._add(server_uri)
+        self.server_pools[server_uri].put(connection)
 
 
 class SelectorBase:
@@ -666,20 +683,24 @@ class SelectorBase:
     See :py:func:`~memcached2.SelectorBase.select` for details of implementing
     a subclass.
     '''
-    def select(self, server_list, hasher, key):
+    def select(self, server_uri_list, hasher, key, server_pool):
         '''Select a server bashed on the `key_hash`.
 
         Given the list of servers and a hash of of key, determine which
         of the servers this key is associated with on.
 
-        :param server_list: A list of the servers to select among.
-        :type server_list: list of :py:class:`~memcache2.ServerConnection`.
+        :param server_uri_list: A list of the server URIs to select among.
+        :type server_uri_list: list of server URIs
         :param hasher: Hasher function, such as
             :py:func:`memcache2.HasherBase.hash`.
         :type hasher: :py:func:`memcache2.HasherBase.hash`.
         :param key: The key to hash.
         :type key: str
-        :returns: ServerConnection -- The server to use for the specified key.
+        :param server_pool: (None) A server connection pool.  If not
+            specified, a global pool is used.
+        :type server_pool: :py:class:`~memcache2.ServerPool` object.
+
+        :returns: string -- The server_uri to use.
         :raises: :py:exc:`~memcached2.NoAvailableServers`
         '''
         raise NotImplementedError('This class is only meant to be subclassed')
@@ -690,14 +711,14 @@ class SelectorFirst(SelectorBase):
     '''Server selector that only returns the first server.  Useful when there
     is only one server to select amongst.
     '''
-    def select(self, server_list, hasher, key):
+    def select(self, server_uri_list, hasher, key, server_pool):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
-        server = server_list[0]
-        if not server.is_up():
-            server.connect()
-        return server
+        server_uri = server_uri_list[0]
+        if server_pool.is_available(server_uri):
+            return server_uri
+        raise NoAvailableServers()
 
 
 class SelectorRehashDownServers(SelectorBase):
@@ -722,20 +743,19 @@ class SelectorRehashDownServers(SelectorBase):
         '''
         self.hashing_retries = hashing_retries
 
-    def select(self, server_list, hasher, key):
+    def select(self, server_uri_list, hasher, key, server_pool):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
-        server = server_list[hasher(key) % len(server_list)]
-        raise NotImplementedError('Is server up?')
-        if is_server_up(server):
-            return server
+        server_uri = server_uri_list[hasher(key) % len(server_uri_list)]
+        if server_pool.is_available(server_uri):
+            return server_uri
 
         for i in range(self.hashing_retries):
-            server = server_list[hasher(key + str(i)) % len(server_list)]
-            raise NotImplementedError('Is server up?')
-            if is_server_up(server):
-                return server
+            server_uri = server_uri_list[
+                hasher(key + str(i)) % len(server_uri_list)]
+            if server_pool.is_available(server_uri):
+                return server_uri
 
         raise NoAvailableServers()
 
@@ -752,31 +772,21 @@ class SelectorFractalSharding(SelectorBase):
 
     I called it Fractal because when a server is down you dig deeper and see a
     new level of complexity in the keyspace mapping.
-
-    After a specified number of operations, and at the first operation, an
-    attempt will be made to connect to any servers that are not currently
-    up.
     '''
-    def select(self, server_list, hasher, key):
+    def select(self, server_uri_list, hasher, key, server_pool):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
-        original_hash = hasher(key)
-        current_hash = original_hash
-        orig_server_list = server_list    # makes code a bit clearer
-        for i in range(len(orig_server_list)):
-            position = current_hash % len(server_list)
-            server = server_list[position]
+        key_hash = hasher(key)
+        remaining_uris = server_uri_list[:]
+        for i in range(len(server_uri_list)):
+            position = key_hash % len(remaining_uris)
+            server_uri = server_uri_list[position]
 
-            raise NotImplementedError('Server up/connecting logic here')
-            if is_server_up(server):
-                return server
+            if server_pool.is_available(server_uri):
+                return server_uri
 
-            #  restir hash and look among remiaining servers
-            if i == 0:
-                server_list = server_list[:]
-            del(server_list[position])
-            current_hash = hasher(key + str(i))
+            del(remaining_uris[position])
 
         raise NoAvailableServers()
 
@@ -811,36 +821,36 @@ class SelectorConsistentHashing(SelectorBase):
         self.total_buckets = None
         self.buckets = None
 
-    def _initialize_buckets(self, server_list, hasher):
+    def _initialize_buckets(self, server_uri_list, hasher):
         '''Create the consistent-hashing set of buckets, used for determining
         what server to use.'''
 
         if self.buckets is not None:
             return
-        len_server_list = len(server_list)
+        len_uri_list = len(server_uri_list)
         if not self.total_buckets:
-            self.total_buckets = len_server_list * len_server_list
+            self.total_buckets = len_uri_list * len_uri_list
 
         bucket_dict = {}
         for i in range(self.total_buckets):
-            bucket_dict[hasher(str(i))] = i % len_server_list
+            bucket_dict[hasher(str(i))] = i % len_uri_list
 
         self.buckets = sorted(bucket_dict.items())
 
-    def select(self, server_list, hasher, key):
+    def select(self, server_uri_list, hasher, key, server_pool):
         '''See :py:func:`memcached2.SelectorBase.select` for details of
         this function.
         '''
         if self.buckets is None:
-            self._initialize_buckets(server_list, hasher)
+            self._initialize_buckets(server_uri_list, hasher)
 
         hashed_key = hasher(key)
         offset = bisect(self.buckets, (hashed_key, 0))
         len_buckets = len(self.buckets)
-        len_server_list = len(server_list)
-        already_tried_servers = set()
+        len_uri_list = len(server_uri_list)
+        already_tried_uris = set()
         for i in range(len_buckets):
-            if len(already_tried_servers) == len_server_list:
+            if len(already_tried_uris) == len_uri_list:
                 raise NoAvailableServers()
 
             bucket_offset = (offset + i) % len_buckets
@@ -851,15 +861,14 @@ class SelectorConsistentHashing(SelectorBase):
             else:
                 bucket = self.buckets[bucket_offset]
 
-            server_offset = bucket[1]
-            server = server_list[server_offset]
-            if server_offset in already_tried_servers:
+            uri_offset = bucket[1]
+            server_uri = server_uri_list[uri_offset]
+            if uri_offset in already_tried_uris:
                 continue
-            already_tried_servers.update([server_offset])
+            already_tried_uris.update([uri_offset])
 
-            raise NotImplementedError('Server up/connecting logic here')
-            if is_server_up(server):
-                return server
+            if server_pool.is_available(server_uri):
+                return server_uri
 
         raise NoAvailableServers()
 
@@ -875,6 +884,9 @@ class ReconnectorBase:
     The Reconnector tracks problems with servers and defers connections
     when it's been having problems.
     '''
+
+    def __init__(self):
+        pass
 
     def connectable(self, server_url):
         '''Is the specified server connectable?
@@ -904,12 +916,13 @@ class ReconnectorBase:
         raise NotImplementedError()
 
 
-class ReconnectorSimple:
+class ReconnectorSimple(ReconnectorBase):
 
     '''This is a simple reconnector that immediately tries connections on
     down servers.
     '''
     def __init__(self):
+        ReconnectorBase.__init__(self)
         self.server_data = {}
 
     def connectable(self, server_url):
@@ -931,7 +944,7 @@ class ReconnectorSimple:
         pass
 
 
-class ReconnectorTime:
+class ReconnectorTime(ReconnectorBase):
 
     '''Try reconnecting to a server after a specific number of seconds
     since the last failed operation.
@@ -942,9 +955,9 @@ class ReconnectorTime:
         :param timeout: Number of seconds since last error.
         :type timeout: float
         '''
+        ReconnectorBase.__init__(self)
         self.timeout = timeout
         self.last_error = {}
-        return super(ReconnectorTime, self).__init__()
 
     def connectable(self, server_url):
         '''See :py:func:`memcached2.ReconnectorBase.connectable` for
@@ -1032,17 +1045,17 @@ class Memcache:
         :type hasher: :py:class:`~memcache2.HasherBase`
         :param server_pool: (None) A server connection pool.  If not
             specified, a global pool is used.
-            :type server_pool: :py:class:`~memcache2.ServerPool` object.
+        :type server_pool: :py:class:`~memcache2.ServerPool` object.
         '''
 
-        self.servers = [ServerConnection(x) for x in servers]
+        self.server_uris = servers
 
         self.value_wrapper = value_wrapper
 
         if hasher is not None:
             self.hasher = hasher
         else:
-            if len(self.servers) < 2:
+            if len(self.server_uris) < 2:
                 self.hasher = HasherZero()
             else:
                 self.hasher = HasherCMemcache()
@@ -1050,9 +1063,9 @@ class Memcache:
         if selector is not None:
             self.selector = selector
         else:
-            if len(self.servers) < 2:
+            if len(self.server_uris) < 2:
                 self.selector = SelectorFirst()
-            elif len(self.servers) == 2:
+            elif len(self.server_uris) == 2:
                 self.selector = SelectorRehashDownServers()
             else:
                 self.selector = SelectorFractalSharding()
@@ -1072,7 +1085,8 @@ class Memcache:
         :returns: :py:class:`~memcached2.ServerConnection` -- The server object
             that the command was sent to.
         '''
-        return self._select_server(key)
+        return self.selector.select(self.server_uris, self.hasher.hash, key,
+                                    self.server_pool)
 
     def _send_command(self, command, key=None, server=None):
         '''INTERNAL: Send a command to a server.
@@ -1095,8 +1109,10 @@ class Memcache:
             :py:exc:`~memcached2.ServerDisconnect`
         '''
         if not server:
-            server = self._select_server(key)
+            server = self.server_pool.get(self._select_server(key))
 
+        if not server.backend:
+            server.connect()
         command = _to_bytes(command)
         try:
             server.send_command(command)
@@ -1125,7 +1141,7 @@ class Memcache:
         :param keys: Keys to be hashed to determine the server they are
                 associated with.
         :type keys: A list of strs.
-        :returns: A list of `(server,keys)` pairs, where the `keys` is a
+        :returns: A list of `(server_uri,keys)` pairs, where the `keys` is a
                 list of keys associated with that server.
         '''
         server_map = collections.defaultdict(list)
@@ -1150,6 +1166,7 @@ class Memcache:
             return None, None
 
         if not data.startswith('VALUE'):
+            server.reset()
             raise NotImplementedError(
                 'Unknown response: {0}'.format(repr(data[:30])))
 
@@ -1167,6 +1184,7 @@ class Memcache:
 
         data = server.read_until()   # trailing termination
         if data != '\r\n':
+            server.reset()
             raise NotImplementedError(
                 'Unexpected response when looking for terminator: {0}'
                 .format(data))
@@ -1197,9 +1215,11 @@ class Memcache:
 
         key, value = self._get_parser(server)
         if key is None:
+            server.reset()
             raise NoValue()
 
         data = server.read_until()
+        self.server_pool.put(server)
         if data != 'END\r\n':
             raise NotImplementedError(
                 'Unknown response: {0}'.format(repr(data[:30])))
@@ -1231,8 +1251,9 @@ class Memcache:
 
         results = {}
 
-        for server, server_keys in self._keys_by_server(keys):
+        for server_uri, server_keys in self._keys_by_server(keys):
             key_str = ' '.join(server_keys)
+            server = self.server_pool.get(server_uri)
             self._send_command(command.format(key_str), server=server)
 
             while True:
@@ -1241,6 +1262,8 @@ class Memcache:
                     break
 
                 results[key] = value
+
+            self.server_pool.put(server)
 
         return results
 
@@ -1292,7 +1315,8 @@ class Memcache:
             base_options.update(to_send[2])
 
         #  find server for command
-        server = self._select_server(key)
+        server = self.server_pool.get(self._select_server(key))
+        server.connect()
         if not server in nonblocking_servers:
             nonblocking_servers.add(server)
             server.setblocking(False)
@@ -1394,6 +1418,7 @@ class Memcache:
 
         for server in nonblocking_servers:
             server.setblocking(True)
+            self.server_pool.put(server)
 
         if deferred_exception:
             raise deferred_exception
@@ -1505,6 +1530,8 @@ class Memcache:
 
         data = server.read_until()
 
+        self.server_pool.put(server)
+
         if data == 'DELETED\r\n':
             return True
         if data == 'NOT_FOUND\r\n':
@@ -1512,6 +1539,12 @@ class Memcache:
 
         raise NotImplementedError(
             'Unknown return data from server: "{0}"'.format(repr(data)))
+
+    def _all_available_server_uris(self):
+        '''INTERNAL: Return a list of all server URIs that are available.
+        '''
+        return [x for x in self.server_uris
+                if self.server_pool.is_available(x)]
 
     def delete_all(self, key):
         '''Delete the key from all servers if it exists.
@@ -1530,10 +1563,12 @@ class Memcache:
         command = 'delete {0}\r\n'.format(key)
 
         found_key = False
-        for server in [x for x in self.servers if x.backend]:
+        for server in [self.server_pool.get(x)
+                       for x in self._all_available_server_uris()]:
             self._send_command(command, server=server)
 
             data = server.read_until()
+            self.server_pool.put(server)
 
             if data == 'DELETED\r\n':
                 found_key = True
@@ -1563,6 +1598,7 @@ class Memcache:
 
         server = self._send_command(command, key)
         data = server.read_until()
+        self.server_pool.put(server)
 
         if data == 'TOUCHED\r\n':
             return
@@ -1574,8 +1610,10 @@ class Memcache:
 
     def _reconnect_all(self):
         '''INTERNAL: Attempt to connect to all backend servers.'''
-        for server in [x for x in self.servers if not x.backend]:
+        for server in [self.server_pool.get(x)
+                       for x in self._all_available_server_uris()]:
             server.connect()
+            self.server_pool.put(server)
 
     def flush_all(self):
         '''Flush the memcache servers.
@@ -1587,12 +1625,12 @@ class Memcache:
 
         :raises: :py:exc:`NotImplementedError`
         '''
-        command = 'flush_all\r\n'
-
         self._reconnect_all()
-        for server in [x for x in self.servers if x.backend]:
-            server.send_command(command)
+        for server in [self.server_pool.get(x)
+                       for x in self._all_available_server_uris()]:
+            server.send_command('flush_all\r\n')
             data = server.read_until()
+            self.server_pool.put(server)
 
             if data != 'OK\r\n':
                 raise NotImplementedError(
@@ -1617,10 +1655,12 @@ class Memcache:
         '''
         results = []
         self._reconnect_all()
-        for server in self.servers:
+        for server in [self.server_pool.get(x)
+                       for x in self._all_available_server_uris()]:
             stats = None
             if server.backend:
                 stats = function(server)
+            self.server_pool.put(server)
             results.append(stats)
         return results
 
@@ -1943,6 +1983,7 @@ class Memcache:
         '''
         server = self._send_command(command, key)
         data = server.read_until()
+        self.server_pool.put(server)
 
         #  <NEW_VALUE>\r\n
         if data[0] in '0123456789':
@@ -1974,6 +2015,7 @@ class Memcache:
         '''
         server = self._send_command(command, key)
         data = server.read_until()
+        self.server_pool.put(server)
 
         if data == 'STORED\r\n':
             return
@@ -1991,8 +2033,10 @@ class Memcache:
         '''Close the connection to all the backend servers.
         '''
 
-        for server in self.servers:
+        for server in [self.server_pool.get(x)
+                       for x in self._all_available_server_uris()]:
             server.reset()
+            self.server_pool.put(server)
 
 
 class ExceptionsAreMissesMemcache(Memcache):
@@ -2182,8 +2226,14 @@ class ServerConnection:
         self.reset()
         if self.parsed_uri['protocol'] == 'memcached':
             self.backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.backend.connect(
-                (self.parsed_uri['host'], self.parsed_uri['port']))
+            try:
+                self.backend.connect(
+                    (self.parsed_uri['host'], self.parsed_uri['port']))
+            except socket.gaierror as ex:
+                raise InvalidURI('Error connecting to "{0}" '
+                                 '(host={1}, port={2}): {3}'.format(
+                                     self.uri, repr(self.parsed_uri['host']),
+                                     self.parsed_uri['port'], str(ex)))
             if not self.backend.setblocking:
                 self.backend.setblocking(self.is_blocking)
             return
@@ -2202,6 +2252,9 @@ class ServerConnection:
 
         :raises: :py:exc:`~memcached2.ServerDisconnect`
         '''
+
+        if not self.backend:
+            self.connect()
 
         try:
             self.backend.send(_to_bytes(command))

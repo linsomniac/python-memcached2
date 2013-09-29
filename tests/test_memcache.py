@@ -487,7 +487,7 @@ class test_Memcache(unittest.TestCase):
 
     def test_KeysByServer(self):
         memcache = memcached2.Memcache((
-            'memcached://localhost/', 'memcached://localhost/',))
+            'memcached://localhost/', 'memcached://localhost:11211/',))
 
         data = list(memcache._keys_by_server(['a', 'b', 'c', 'd', 'e', 'f']))
         self.assertEqual(
