@@ -90,7 +90,7 @@ class test_ServerConnection(unittest.TestCase):
         sc = 'memcached://127.0.0.1/'
         sc2 = 'memcached://127.0.0.1:11234/'
         self.assertEqual(selector.select([sc, sc2], None, None,
-                                         memcached2._global_pool).uri, sc)
+                                         memcached2._global_pool), sc)
 
     def test_Hashers(self):
         self.assertEqual(memcached2.HasherZero().hash('x'), 0)

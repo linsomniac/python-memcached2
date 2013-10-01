@@ -1117,8 +1117,10 @@ class Memcache:
         try:
             server.send_command(command)
         except ConnectionResetError:
+            server.reset()
             raise ServerDisconnect('ConnectionResetError')
         except BrokenPipeError:
+            server.reset()
             raise ServerDisconnect('BrokenPipeError')
 
         return server
@@ -1315,13 +1317,15 @@ class Memcache:
             base_options.update(to_send[2])
 
         #  find server for command
-        server = self.server_pool.get(self._select_server(key))
-        server.connect()
-        if not server in nonblocking_servers:
-            nonblocking_servers.add(server)
+        server_uri = self._select_server(key)
+        if not server_uri in nonblocking_servers:
+            server = self.server_pool.get(self._select_server(key))
+            server.connect()
+            nonblocking_servers[server_uri] = server
             server.setblocking(False)
             output_buffers[server] = bytearray()
             expected_keys[server] = []
+        server = nonblocking_servers[server_uri]
 
         #  add command to output buffer
         output_buffer = output_buffers[server]
@@ -1380,7 +1384,7 @@ class Memcache:
         output_buffers = {}
         expected_keys = {}
         results = {}
-        nonblocking_servers = set()
+        nonblocking_servers = {}
         send_threshold = 180224
         send_minimum = send_threshold
         deferred_exception = None
@@ -1416,7 +1420,7 @@ class Memcache:
             if had_exception:
                 deferred_exception = had_exception
 
-        for server in nonblocking_servers:
+        for server in nonblocking_servers.values():
             server.setblocking(True)
             self.server_pool.put(server)
 
