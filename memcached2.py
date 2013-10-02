@@ -165,6 +165,18 @@ def _dictionary_values_empty(d):
     return [x for x in d.values() if x]
 
 
+def debug(msg):
+    '''INTERNAL: Write a debugging message to stderr with a stack trace.
+    '''
+    import inspect
+    import os
+    stack = (
+        ' -> '.join(['{0}({1}:{2})'.format(x[3],
+                                           os.path.basename(x[1]), x[2])
+                     for x in reversed(inspect.stack()[1:])]))
+    sys.stderr.write('{0} => {1}\n'.format(msg, stack))
+
+
 class MemcachedException(Exception):
 
     '''Base exception that all other exceptions inherit from.
@@ -660,6 +672,20 @@ class ServerPool:
         self._add(server_uri)
         self.server_pools[server_uri].put(connection)
 
+    def empty(self):
+        '''Release all the server connections currently in the pool.'''
+        for pool in self.server_pools.values():
+            if pool.empty():
+                continue
+            try:
+                connection = pool.get_nowait()
+                connection.reset()
+            except queue.Empty:
+                pass
+
+    def __del__(self):
+        self.empty()
+
 
 class SelectorBase:
 
@@ -1111,8 +1137,6 @@ class Memcache:
         if not server:
             server = self.server_pool.get(self._select_server(key))
 
-        if not server.backend:
-            server.connect()
         command = _to_bytes(command)
         try:
             server.send_command(command)
@@ -1531,9 +1555,7 @@ class Memcache:
         command = 'delete {0}\r\n'.format(key)
 
         server = self._send_command(command, key)
-
         data = server.read_until()
-
         self.server_pool.put(server)
 
         if data == 'DELETED\r\n':
@@ -2233,6 +2255,7 @@ class ServerConnection:
             try:
                 self.backend.connect(
                     (self.parsed_uri['host'], self.parsed_uri['port']))
+                debug('*** OPENING: {0}'.format(repr(self.backend)))
             except socket.gaierror as ex:
                 raise InvalidURI('Error connecting to "{0}" '
                                  '(host={1}, port={2}): {3}'.format(
