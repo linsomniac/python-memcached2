@@ -175,6 +175,7 @@ def debug(msg):
                                            os.path.basename(x[1]), x[2])
                      for x in reversed(inspect.stack()[1:])]))
     sys.stderr.write('{0} => {1}\n'.format(msg, stack))
+    sys.stderr.flush()
 
 
 class MemcachedException(Exception):
@@ -1237,18 +1238,18 @@ class Memcache:
         command = 'get {0}\r\n'
         if get_cas:
             command = 'gets {0}\r\n'
-        server = self._send_command(command.format(key), key)
+        with self._send_command(
+                command.format(key), key).managed_pool(
+                self.server_pool) as server:
+            key, value = self._get_parser(server)
+            if key is None:
+                server.reset()
+                raise NoValue()
 
-        key, value = self._get_parser(server)
-        if key is None:
-            server.reset()
-            raise NoValue()
-
-        data = server.read_until()
-        self.server_pool.put(server)
-        if data != 'END\r\n':
-            raise NotImplementedError(
-                'Unknown response: {0}'.format(repr(data[:30])))
+            data = server.read_until()
+            if data != 'END\r\n':
+                raise NotImplementedError(
+                    'Unknown response: {0}'.format(repr(data[:30])))
 
         return value
 
@@ -1554,9 +1555,10 @@ class Memcache:
         '''
         command = 'delete {0}\r\n'.format(key)
 
-        server = self._send_command(command, key)
-        data = server.read_until()
-        self.server_pool.put(server)
+        with self._send_command(
+                command, key).managed_pool(self.server_pool) as server:
+            server = self._send_command(command, key)
+            data = server.read_until()
 
         if data == 'DELETED\r\n':
             return True
@@ -2380,6 +2382,26 @@ class ServerConnection:
         if not self.backend:
             return None
         return self.backend.fileno()
+
+    def managed_pool(self, pool=None):
+        self.pool = pool
+        return self
+
+    def __enter__(self):
+        debug('Entering pool: {0}'.format(repr(self.backend)))
+        if not hasattr(self, 'pool'):
+            raise NotImplementedError(
+                'Context manager needs to be used with managed_pool() method')
+
+        return self
+
+    def __exit__(self, ext, exv, trb):
+        '''Close backend if exception, otherwise return to pool.'''
+        if ext:
+            self.reset()
+        elif self.backend and self.pool:
+            self.pool.put(self)
+        delattr(self, 'pool')
 
     def __repr__(self):
         return '<ServerConnection to {0}>'.format(self.uri)
