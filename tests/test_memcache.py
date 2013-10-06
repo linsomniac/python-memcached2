@@ -505,10 +505,10 @@ class test_Memcache(unittest.TestCase):
         for i in range(10):
             memcache.set(str(i), '*' * i)
 
-    def test_SelectorAvailableServers(self):
+    def test_SelectorRehashDownServers(self):
         memcache = memcached2.Memcache((
                 'memcached://localhost/', 'memcached://localhost/',),
-                selector=memcached2.SelectorAvailableServers())
+                selector=memcached2.SelectorRehashDownServers())
 
         for i in range(10):
             memcache.set(str(i), '*' * i)

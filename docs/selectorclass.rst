@@ -7,5 +7,5 @@ Selector Routines
 .. autoclass:: memcached2.SelectorFirst
    :members: select
 
-.. autoclass:: memcached2.SelectorAvailableServers
+.. autoclass:: memcached2.SelectorRehashDownServers
    :members: select

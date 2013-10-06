@@ -61,7 +61,7 @@ Wed May 28, 2013
 
 Wed May 27, 2013
 
-  * SelectorAvailableServers now can flush all servers when the topology
+  * SelectorRehashDownServers now can flush all servers when the topology
     changes.  That's the situation it is most suited for, though it's also
     ideal for 2 server clusters.
 
